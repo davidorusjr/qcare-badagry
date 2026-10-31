@@ -16,7 +16,7 @@ It eliminates 5-hour physical waiting room queues by enabling records clerks to 
 ## Key Features
 
 * **Record Intake Portal (Clerk View):** Requires only Name, Phone Number, and Department select—logging patients in under 10 seconds.
-* **One-Click Doctor Console:** Doctors push a single `[CALL NEXT PATIENT]` button to update line status dynamically.
+* **One-Click Doctor/Nurse Console:** Doctors push a single `[CALL NEXT PATIENT]` button to update line status dynamically.
 * **Multi-Channel SMS & Voice Simulation:** Sends automated SMS updates via Termii API and previews Yoruba voice drop alerts for elderly/non-literate patients.
 * **Lobby TV Waiting Room Monitor:** Real-time broadcast screen for hospital waiting sheds, allowing patients without mobile phones to track their turns.
 * **Priority Triage Override:** Automatic triage priority handling for urgent clinical cases.
