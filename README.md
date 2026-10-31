@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+#  Q-Care Badagry
 
-## Getting Started
+> **Submission for the Badagry Builder Challenge 2026**  
+> *Track: Health & Community Infrastructure*
 
-First, run the development server:
+
+
+## Overview
+
+**Q-Care Badagry** is a zero-friction, multi-channel queue orchestration system built for public healthcare facilities in Badagry Division, such as Badagry General Hospital and local Primary Health Centres (PHCs).
+
+It eliminates 5-hour physical waiting room queues by enabling records clerks to register patients in under 10 seconds and dispatch dynamic queue alerts directly to patients via SMS, WhatsApp, and localized Yoruba/Egun voice drops.
+
+---
+
+## Key Features
+
+* **Record Intake Portal (Clerk View):** Requires only Name, Phone Number, and Department select—logging patients in under 10 seconds.
+* **One-Click Doctor Console:** Doctors push a single `[CALL NEXT PATIENT]` button to update line status dynamically.
+* **Multi-Channel SMS & Voice Simulation:** Sends automated SMS updates via Termii API and previews Yoruba voice drop alerts for elderly/non-literate patients.
+* **Lobby TV Waiting Room Monitor:** Real-time broadcast screen for hospital waiting sheds, allowing patients without mobile phones to track their turns.
+* **Priority Triage Override:** Automatic triage priority handling for urgent clinical cases.
+
+---
+
+## Tech Stack
+
+* **Framework:** Next.js 14 (App Router)
+* **Language:** TypeScript (`.tsx`)
+* **Styling:** Tailwind CSS
+* **Icons:** Lucide React
+* **Deployment:** Vercel
+
+---
+
+## Local Development Setup
+
+To run this project locally on your machine:
 
 ```bash
+# 1. Clone the repository
+git clone [https://github.com/davidorusjr/qcare-badagry.git](https://github.com/YOUR_GITHUB_USERNAME/qcare-badagry.git)
+
+# 2. Navigate into the directory
+cd qcare-badagry
+
+# 3. Install dependencies
+npm install
+
+# 4. Run the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
