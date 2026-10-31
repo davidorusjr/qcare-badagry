@@ -523,9 +523,7 @@ export default function Page() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-teal-700 text-white">
-              <Stethoscope className="h-5 w-5" aria-hidden="true" />
-            </div>
+           <img src="/qcare-logo.png" alt="Q-Care Badagry" className="h-10 w-10 shrink-0 rounded object-contain" />
             <h1 className="min-w-0 font-semibold leading-snug text-slate-900">
               <span className="block text-base sm:inline sm:text-lg">Q-Care Badagry</span>
               <span className="hidden px-1.5 font-normal text-slate-300 sm:inline sm:text-lg">|</span>
