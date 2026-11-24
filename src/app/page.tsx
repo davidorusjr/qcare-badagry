@@ -6,7 +6,6 @@ import {
   ArrowRight,
   BellRing,
   Building2,
-  Cast,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -19,6 +18,7 @@ import {
   Monitor,
   Phone,
   RotateCcw,
+  RotateCw,
   Search,
   Smartphone,
   Square,
@@ -121,10 +121,10 @@ const INITIAL_PATIENTS: Patient[] = [
 ];
 
 const ROLE_TABS = [
-  { id: 'INTAKE', label: 'Records Intake', hint: 'Registration clerk', Icon: UserPlus },
-  { id: 'CONSOLE', label: 'Clinician Console', hint: 'Nurse, doctor, lab, pharmacy', Icon: ClipboardList },
-  { id: 'LOBBY_TV', label: 'Lobby TV Display', hint: 'Waiting room screen', Icon: Monitor },
-  { id: 'PATIENT_TRACKER', label: 'Patient Live Check', hint: 'Patient on a phone', Icon: Smartphone },
+  { id: 'INTAKE', label: 'Records Intake', hint: 'Registration desk', Icon: UserPlus },
+  { id: 'CONSOLE', label: 'Clinician Console', hint: 'Nurse, doctor, lab', Icon: ClipboardList },
+  { id: 'LOBBY_TV', label: 'Lobby TV Display', hint: 'Waiting hall TV', Icon: Monitor },
+  { id: 'PATIENT_TRACKER', label: 'Patient Live Check', hint: 'Patient phone', Icon: Smartphone },
 ] as const;
 
 /* -------------------------------------------------------------------------- */
@@ -142,7 +142,7 @@ const STATUS_STYLE: Record<PatientStatus, string> = {
   WAITING: 'border-slate-300 bg-slate-50 text-slate-700',
   ALERTED: 'border-amber-300 bg-amber-50 text-amber-900',
   IN_DOCTOR_ROOM: 'border-teal-300 bg-teal-50 text-teal-900',
-  COMPLETED: 'border-slate-200 bg-white text-slate-500',
+  COMPLETED: 'border-slate-200/90 bg-white text-slate-500',
 };
 
 const STATUS_ORDER: Record<PatientStatus, number> = {
@@ -161,7 +161,7 @@ const focusRing =
 const hideScrollbar = '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /** Column widths shared by the header and every row, so nothing shifts. */
-const IN_PROGRESS_COLS = 'lg:grid-cols-[5rem_minmax(0,1fr)_7rem_8.5rem_22rem]';
+const IN_PROGRESS_COLS = 'lg:grid-cols-[6.5rem_minmax(0,1fr)_7.5rem_8.5rem_22rem]';
 
 /** Fixed time zone so server and client render the same text. */
 function formatTime(iso: string): string {
@@ -346,18 +346,79 @@ function playChime() {
 function StatusBadge({ status }: { status: PatientStatus }) {
   return (
     <span
-      className={`inline-block whitespace-nowrap rounded border px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[status]}`}
+      className={`inline-block whitespace-nowrap border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider ${STATUS_STYLE[status]}`}
     >
       {STATUS_LABEL[status]}
     </span>
   );
 }
 
+/** Red wristband strip with stitched edge. */
 function EmergencyBadge() {
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded border border-red-300 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap bg-red-700 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-white outline outline-1 -outline-offset-2 outline-dashed outline-white/60">
       <AlertTriangle className="h-3 w-3" aria-hidden="true" />
       Emergency
+    </span>
+  );
+}
+
+function NormalTag() {
+  return (
+    <span className="inline-block border border-slate-300 px-1.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+      Normal
+    </span>
+  );
+}
+
+/** Printed queue slip: department code and number, split by a tear line. */
+function Ticket({
+  no,
+  size = 'sm',
+  dark = false,
+}: {
+  no: string;
+  size?: 'sm' | 'lg' | 'xl';
+  dark?: boolean;
+}) {
+  const [code, ...rest] = no.split('-');
+  const num = rest.join('-');
+  const text = size === 'xl' ? 'text-3xl sm:text-4xl' : size === 'lg' ? 'text-2xl' : 'text-[13px]';
+  const pad = size === 'xl' ? 'px-3 py-2' : size === 'lg' ? 'px-2.5 py-1.5' : 'px-1.5 py-1';
+  return (
+    <span
+      className={`inline-flex items-stretch border font-mono font-bold leading-none tabular-nums ${text} ${
+        dark ? 'border-slate-300 bg-slate-900 text-white' : 'border-slate-900 bg-white text-slate-900'
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`${pad} ${dark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'}`}
+      >
+        {code}
+      </span>
+      <span
+        aria-hidden="true"
+        className={`${pad} border-l-2 border-dashed ${dark ? 'border-slate-500' : 'border-slate-400'}`}
+      >
+        {num}
+      </span>
+      <span className="sr-only">{no}</span>
+    </span>
+  );
+}
+
+/** Door-plate style room callout. */
+function RoomPlate({ room, tone = 'dark' }: { room: string; tone?: 'dark' | 'amber' }) {
+  return (
+    <span
+      className={`inline-block whitespace-nowrap border px-2 py-0.5 font-mono text-xs font-bold uppercase tracking-wider ${
+        tone === 'amber'
+          ? 'border-amber-400 bg-amber-400 text-slate-950'
+          : 'border-slate-900 bg-slate-900 text-white'
+      }`}
+    >
+      {room}
     </span>
   );
 }
@@ -371,10 +432,10 @@ function JourneyBadges({ history, dark = false }: { history?: string[]; dark?: b
       {history.map((stage, i) => (
         <span
           key={`${stage}-${i}`}
-          className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 ${
+          className={`inline-flex items-center gap-1 border px-1.5 py-0.5 ${
             dark
               ? 'border-slate-600 bg-slate-800 text-slate-200'
-              : 'border-slate-200 bg-slate-50 text-slate-700'
+              : 'border-slate-300 bg-slate-50 text-slate-700'
           }`}
         >
           <Check className="h-3 w-3" aria-hidden="true" />
@@ -401,34 +462,40 @@ function KpiStrip({
     {
       label: 'Emergency / urgent',
       value: String(urgent),
-      hint: urgent > 0 ? 'Seen first' : 'None active',
+      hint: urgent > 0 ? 'Active' : 'None',
       Icon: AlertTriangle,
       alert: urgent > 0,
     },
-    { label: 'In consultation / alerted', value: String(inCare), hint: 'Called or with a clinician', Icon: Stethoscope, alert: false },
+    { label: 'In consultation / alerted', value: String(inCare), hint: 'Called or in room', Icon: Stethoscope, alert: false },
     {
       label: 'Est. avg wait',
       value: waiting > 0 ? `${avgWait} min` : 'None',
-      hint: 'People still waiting',
+      hint: 'Waiting patients',
       Icon: Clock,
       alert: false,
     },
   ];
 
   return (
-    <dl aria-label="Hospital summary" className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+    <dl
+      aria-label="Hospital summary"
+      className="grid grid-cols-2 gap-px border border-slate-300 bg-slate-300 lg:grid-cols-4"
+    >
       {cards.map(({ label, value, hint, Icon, alert }) => (
-        <div
-          key={label}
-          className={`rounded border p-3 sm:p-4 ${
-            alert ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-          }`}
-        >
-          <dt className={`flex items-center gap-2 text-xs font-medium sm:text-sm ${alert ? 'text-red-800' : 'text-slate-600'}`}>
+        <div key={label} className={`p-3 sm:p-4 ${alert ? 'bg-red-50' : 'bg-white'}`}>
+          <dt
+            className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider sm:text-xs ${
+              alert ? 'text-red-800' : 'text-slate-600'
+            }`}
+          >
             <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
             {label}
           </dt>
-          <dd className={`mt-1 text-2xl font-semibold tabular-nums ${alert ? 'text-red-800' : 'text-slate-900'}`}>
+          <dd
+            className={`mt-1 font-mono text-3xl font-bold tabular-nums ${
+              alert ? 'text-red-800' : 'text-slate-900'
+            }`}
+          >
             {value}
           </dd>
           <dd className={`text-xs ${alert ? 'text-red-700' : 'text-slate-500'}`}>{hint}</dd>
@@ -441,6 +508,35 @@ function KpiStrip({
 /* -------------------------------------------------------------------------- */
 /* Lobby TV display                                                           */
 /* -------------------------------------------------------------------------- */
+
+const TICKER_ITEMS = [
+  'Emergency cases are prioritized by Triage',
+  'Keep your phone close for SMS & Yoruba/Ogu voice alerts',
+  'Proceed to the room shown when your number is called',
+];
+
+function TvTicker() {
+  const line = TICKER_ITEMS.join('   •   ');
+  return (
+    <div
+      aria-label="Hospital announcements"
+      className="flex items-stretch overflow-hidden border-t border-slate-700 bg-black"
+    >
+      <style>{'@keyframes qc-ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}'}</style>
+      <span className="shrink-0 bg-amber-400 px-3 py-2 font-mono text-xs font-bold tracking-widest text-slate-950 xl:px-5 xl:text-lg">
+        NOTICE
+      </span>
+      <div className="min-w-0 flex-1 overflow-hidden py-2 text-sm text-slate-200 xl:text-xl">
+        <div className="flex w-max motion-safe:animate-[qc-ticker_45s_linear_infinite] motion-reduce:w-auto">
+          <p className="whitespace-nowrap px-6 motion-reduce:whitespace-normal">{line}</p>
+          <p aria-hidden="true" className="whitespace-nowrap px-6 motion-reduce:hidden">
+            {line}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TvBoard({
   patients,
@@ -455,26 +551,33 @@ function TvBoard({
 }) {
   return (
     <div
-      className={`flex flex-col bg-slate-950 text-white ${
-        fullscreen
-          ? 'min-h-full'
-          : 'rounded-lg border-4 border-slate-800 sm:border-8 lg:min-h-[32rem] xl:aspect-video'
+      className={`flex flex-col bg-[#090D16] text-white ${
+        fullscreen ? 'min-h-full' : 'border border-slate-700 lg:min-h-[32rem] xl:aspect-video'
       }`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-4 py-3 sm:px-6 sm:py-4">
-        <div>
-          <p className="text-lg font-semibold sm:text-2xl xl:text-3xl">Badagry General Hospital</p>
-          <p className="text-sm text-slate-400 xl:text-lg">Patient queue status</p>
-        </div>
-        <div className="text-right">
-          <p className="text-2xl font-semibold tabular-nums sm:text-3xl xl:text-5xl">
-            {now ? formatClock(now) : '--:--:--'}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="min-w-0">
+          <p className="text-base font-bold tracking-[-0.02em] sm:text-2xl xl:text-3xl">
+            Badagry General Hospital
           </p>
-          <p className="text-xs text-slate-400 sm:text-sm xl:text-base">{now ? formatDate(now) : ' '}</p>
+          <p className="text-xs text-slate-400 sm:text-sm xl:text-lg">Patient queue</p>
+        </div>
+        <div className="flex items-center gap-3 sm:gap-5">
+          <span className="border border-red-500 px-2 py-1 font-mono text-[11px] font-bold tracking-widest text-red-400 motion-safe:animate-pulse sm:text-xs xl:text-lg">
+            ON AIR / LIVE
+          </span>
+          <div className="text-right">
+            <p className="font-mono text-xl font-bold tabular-nums sm:text-3xl xl:text-5xl">
+              {now ? formatClock(now) : '--:--:--'}
+            </p>
+            <p className="text-[11px] text-slate-400 sm:text-xs xl:text-base">
+              {now ? formatDate(now) : ' '}
+            </p>
+          </div>
         </div>
       </div>
 
-      <ul className="grid flex-1 auto-rows-fr gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-3 xl:gap-4 xl:p-6">
+      <ul className="grid flex-1 auto-rows-fr gap-px bg-slate-700 sm:grid-cols-2 lg:grid-cols-3">
         {departments.map((d) => {
           const serving = nowServing(patients, d.id);
           const next = waitingQueue(patients, d.id)[0];
@@ -482,41 +585,41 @@ function TvBoard({
           return (
             <li
               key={d.id}
-              className={`flex flex-col justify-between gap-3 rounded border bg-slate-900 p-4 xl:p-6 ${
-                justCalled
-                  ? 'border-amber-400 ring-2 ring-amber-400/70 motion-safe:animate-pulse'
-                  : 'border-slate-700'
+              className={`flex flex-col justify-between gap-3 bg-[#090D16] p-4 xl:p-6 ${
+                justCalled ? 'ring-2 ring-inset ring-amber-400 motion-safe:animate-pulse' : ''
               }`}
             >
-              <p className="text-lg font-semibold text-slate-200 xl:text-2xl">{d.tabLabel}</p>
+              <p className="text-sm font-bold tracking-[-0.02em] text-slate-300 xl:text-2xl">
+                {d.tabLabel}
+              </p>
 
               <div>
                 <p
-                  className={`text-xs font-semibold uppercase tracking-widest xl:text-base ${
-                    serving ? 'text-amber-300 motion-safe:animate-pulse' : 'text-slate-500'
+                  className={`font-mono text-xs font-bold uppercase tracking-widest xl:text-base ${
+                    serving ? 'text-amber-300 motion-safe:animate-pulse' : 'text-slate-600'
                   }`}
                 >
                   Now serving
                 </p>
                 <p
-                  className={`mt-1 text-4xl font-bold tracking-tight xl:text-6xl ${
-                    serving ? 'text-white' : 'text-slate-600'
+                  className={`mt-1 font-mono text-4xl font-bold tabular-nums tracking-tight xl:text-6xl ${
+                    serving ? 'text-[#FBBF24]' : 'text-slate-700'
                   }`}
                 >
-                  {serving ? serving.ticketNo : 'None'}
+                  {serving ? serving.ticketNo : '---'}
                 </p>
                 {serving && (
-                  <p className="mt-1 flex items-center gap-2 text-base font-semibold text-amber-300 xl:text-2xl">
-                    <ArrowRight className="h-5 w-5 xl:h-7 xl:w-7" aria-label="go to" />
-                    {d.room}
+                  <p className="mt-1 flex items-center gap-2 font-mono text-sm font-bold uppercase tracking-wide text-white xl:text-2xl">
+                    <ArrowRight className="h-4 w-4 shrink-0 xl:h-7 xl:w-7" aria-label="to" />
+                    Proceed to {d.room}
                   </p>
                 )}
               </div>
 
-              <p className="border-t border-slate-800 pt-3 text-sm text-slate-400 xl:text-xl">
+              <p className="border-t border-slate-700 pt-3 font-mono text-sm font-bold uppercase tracking-wide text-slate-500 xl:text-xl">
                 Next{' '}
-                <span className={`font-bold ${next ? 'text-white' : 'text-slate-600'}`}>
-                  {next ? next.ticketNo : 'None'}
+                <span className={`tabular-nums ${next ? 'text-[#34D399]' : 'text-slate-700'}`}>
+                  {next ? next.ticketNo : '---'}
                 </span>
               </p>
             </li>
@@ -524,10 +627,7 @@ function TvBoard({
         })}
       </ul>
 
-      <p className="border-t border-slate-800 px-4 py-3 text-sm text-slate-300 sm:px-6 xl:text-xl">
-        Please keep your phone with you. You will get an SMS when it is your turn. Emergencies are
-        always seen first.
-      </p>
+      <TvTicker />
     </div>
   );
 }
@@ -542,6 +642,7 @@ function LobbyView({
   const [now, setNow] = useState<Date | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [hintDismissed, setHintDismissed] = useState(false);
   const exitRef = useRef<HTMLButtonElement>(null);
 
   // Live clock in Lagos time
@@ -576,8 +677,8 @@ function LobbyView({
       .map((d) => ({ d, serving: nowServing(patients, d.id) }))
       .find((x) => x.serving);
     const sentence = first?.serving
-      ? `Now serving ${spellTicket(first.serving.ticketNo)}. Please go to ${first.d.room}.`
-      : 'This is a test of the waiting room announcement.';
+      ? `Now serving ${spellTicket(first.serving.ticketNo)}. Proceed to ${first.d.room}.`
+      : 'Waiting hall display test.';
 
     window.setTimeout(() => {
       if ('speechSynthesis' in window) {
@@ -592,31 +693,25 @@ function LobbyView({
 
   return (
     <section aria-label="Lobby TV display" className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <h2 className="text-lg font-semibold">Lobby TV display</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="tracking-[-0.02em] text-lg font-semibold">Lobby TV</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <p className="inline-flex min-h-[44px] items-center gap-2 rounded border border-teal-300 bg-teal-50 px-3 text-xs text-teal-900 sm:min-h-0 sm:py-1.5">
-            <Cast className="h-4 w-4" aria-hidden="true" />
-            <span>
-              <span className="font-semibold">Live</span> on Main Lobby TV
-            </span>
-          </p>
           <button
             type="button"
             onClick={testAnnouncement}
             disabled={testing}
-            className={`inline-flex min-h-[44px] items-center gap-2 rounded border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:py-1.5 ${focusRing}`}
+            className={`inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:py-1.5 ${focusRing}`}
           >
             <Volume2 className="h-4 w-4" aria-hidden="true" />
-            {testing ? 'Playing test' : 'Test chime and voice'}
+            {testing ? 'Playing' : 'Test sound'}
           </button>
           <button
             type="button"
             onClick={() => setFullscreen(true)}
-            className={`inline-flex min-h-[44px] items-center gap-2 rounded bg-teal-700 px-3 text-sm font-semibold text-white hover:bg-teal-800 sm:min-h-0 sm:py-1.5 ${focusRing}`}
+            className={`inline-flex min-h-[44px] items-center gap-2 rounded-sm bg-teal-700 px-3 text-sm font-semibold text-white hover:bg-teal-800 sm:min-h-0 sm:py-1.5 ${focusRing}`}
           >
             <Maximize2 className="h-4 w-4" aria-hidden="true" />
-            Fullscreen preview
+            Fullscreen
           </button>
         </div>
       </div>
@@ -626,13 +721,13 @@ function LobbyView({
           role="dialog"
           aria-modal="true"
           aria-label="Lobby TV fullscreen preview"
-          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950"
+          className="fixed inset-0 z-50 overflow-y-auto bg-[#090D16]"
         >
           <button
             ref={exitRef}
             type="button"
             onClick={() => setFullscreen(false)}
-            className={`fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[60] inline-flex min-h-[44px] items-center gap-2 rounded border border-slate-600 bg-slate-900/90 px-3 text-sm font-medium text-white hover:bg-slate-800 ${focusRing}`}
+            className={`fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[60] inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-slate-600 bg-slate-900/90 px-3 text-sm font-medium text-white hover:bg-slate-800 ${focusRing}`}
           >
             <Minimize2 className="h-4 w-4" aria-hidden="true" />
             Exit (Esc)
@@ -640,7 +735,52 @@ function LobbyView({
           <TvBoard patients={patients} departments={departments} now={now} fullscreen />
         </div>
       ) : (
-        <TvBoard patients={patients} departments={departments} now={now} fullscreen={false} />
+        /* Wall-mounted monitor: outer bezel, status bar, screen, bottom hardware strip */
+        <div className="mx-auto max-w-[90rem] border border-slate-600 bg-[#10141c] p-2 sm:p-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border border-slate-700 bg-black px-3 py-2 font-mono text-[11px] font-bold tracking-wide text-slate-200 sm:text-xs">
+            <p>📺 WAITING HALL DISPLAY — MAIN OPD CORRIDOR (LIVE TV VIEW)</p>
+            <p className="border border-slate-600 px-2 py-0.5 font-medium text-slate-300">
+              16:9 Landscape Wall Monitor Preview
+            </p>
+          </div>
+
+          {!hintDismissed && (
+            <div
+              role="note"
+              className="mt-2 hidden items-start gap-3 border border-amber-400/60 bg-amber-400/10 px-3 py-2 text-xs text-amber-100 max-sm:portrait:flex"
+            >
+              <RotateCw className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p className="min-w-0 flex-1">
+                Waiting Room TV Display — Rotate phone to landscape for full 16:9 wall-screen view
+              </p>
+              <button
+                type="button"
+                onClick={() => setHintDismissed(true)}
+                aria-label="Dismiss rotate hint"
+                className={`-m-2 shrink-0 p-2 text-amber-100 hover:bg-amber-400/20 ${focusRing}`}
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          )}
+
+          <div className="mt-2">
+            <TvBoard patients={patients} departments={departments} now={now} fullscreen={false} />
+          </div>
+
+          <div
+            aria-hidden="true"
+            className="mt-2 flex items-center justify-between border-t border-slate-700 pt-2"
+          >
+            <span className="font-mono text-[10px] font-bold tracking-[0.35em] text-slate-500">
+              Q-CARE
+            </span>
+            <span className="flex items-center gap-2 font-mono text-[10px] tracking-widest text-slate-500">
+              PWR
+              <span className="h-2 w-2 rounded-full bg-emerald-400 motion-safe:animate-pulse" />
+            </span>
+          </div>
+        </div>
       )}
     </section>
   );
@@ -651,10 +791,10 @@ function LobbyView({
 /* -------------------------------------------------------------------------- */
 
 const TRACKER_STEPS: { key: PatientStatus; label: string }[] = [
-  { key: 'WAITING', label: 'Waiting in queue' },
-  { key: 'ALERTED', label: 'Called, go to your room' },
+  { key: 'WAITING', label: 'Waiting' },
+  { key: 'ALERTED', label: 'Called' },
   { key: 'IN_DOCTOR_ROOM', label: 'In consultation' },
-  { key: 'COMPLETED', label: 'Visit complete' },
+  { key: 'COMPLETED', label: 'Complete' },
 ];
 
 /** Counts down from the estimate and restarts whenever the estimate changes. */
@@ -728,7 +868,7 @@ function PatientTracker({
 
   return (
     <section aria-label="Patient live check" className="mx-auto w-full max-w-sm">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white lg:rounded-[2.25rem] lg:border-[10px] lg:border-slate-800">
+      <div className="overflow-hidden rounded-md border border-slate-200/90 bg-white lg:rounded-[2.25rem] lg:border-[10px] lg:border-slate-800">
         <div className="bg-teal-700 px-4 py-3 text-white">
           <p className="text-base font-semibold">Q-Care Badagry</p>
           <p className="text-sm text-teal-50">Patient live check</p>
@@ -737,7 +877,7 @@ function PatientTracker({
         <div className="space-y-4 p-4">
           <form onSubmit={(e) => e.preventDefault()}>
             <label htmlFor="ticket-input" className="block text-sm font-medium text-slate-800">
-              Your ticket number
+              Ticket number
             </label>
             <div className="relative mt-1">
               <Search
@@ -754,7 +894,7 @@ function PatientTracker({
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}
-                className={`min-h-[44px] w-full rounded border border-slate-300 py-2.5 pl-9 pr-3 text-base uppercase sm:text-sm ${focusRing}`}
+                className={`min-h-[44px] w-full rounded-sm border border-slate-300 py-2.5 pl-9 pr-3 font-mono text-base font-bold uppercase tracking-wide sm:text-sm ${focusRing}`}
               />
               <datalist id="ticket-options">
                 {activeTickets.map((p) => (
@@ -779,7 +919,7 @@ function PatientTracker({
                 type="button"
                 onClick={() => onQueryChange(p.ticketNo)}
                 aria-pressed={ticket === p.ticketNo}
-                className={`min-h-[44px] shrink-0 rounded-full border px-3 text-sm sm:min-h-0 sm:py-1 ${focusRing} ${
+                className={`min-h-[44px] shrink-0 rounded-sm border px-3 font-mono text-sm font-bold sm:min-h-0 sm:py-1 ${focusRing} ${
                   ticket === p.ticketNo
                     ? 'border-teal-700 bg-teal-50 font-medium text-teal-900'
                     : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
@@ -796,15 +936,14 @@ function PatientTracker({
           </p>
 
           {!query.trim() && (
-            <p className="rounded border border-dashed border-slate-300 px-3 py-6 text-center text-sm text-slate-500">
-              Type the ticket number from your slip or SMS, or tap a sample ticket above.
+            <p className="rounded-sm border border-dashed border-slate-300 px-3 py-6 text-center text-sm text-slate-500">
+              Enter ticket number.
             </p>
           )}
 
           {query.trim() && !patient && (
-            <p className="rounded border border-amber-300 bg-amber-50 px-3 py-4 text-sm text-amber-950">
-              No ticket matches “{query.trim()}”. Check the number on your slip. It looks like
-              OPD-015.
+            <p className="rounded-sm border border-amber-300 bg-amber-50 px-3 py-4 text-sm text-amber-950">
+              No match for “{query.trim()}”. Format: OPD-015.
             </p>
           )}
 
@@ -813,7 +952,9 @@ function PatientTracker({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs text-slate-500">Ticket</p>
-                  <p className="text-3xl font-bold tracking-tight">{patient.ticketNo}</p>
+                  <div className="mt-1">
+                    <Ticket no={patient.ticketNo} size="xl" />
+                  </div>
                   <p className="break-words text-sm text-slate-700">
                     {firstName}, {dept.name}
                   </p>
@@ -822,18 +963,18 @@ function PatientTracker({
               </div>
 
               {patient.status === 'WAITING' && (
-                <div className="rounded border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-sm border border-slate-200/90 bg-slate-50 p-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-slate-500">Your position</p>
-                      <p className="text-3xl font-bold">#{position}</p>
+                      <p className="text-xs text-slate-500">Position</p>
+                      <p className="text-3xl font-bold font-mono tabular-nums">#{position}</p>
                       <p className="text-xs text-slate-600">
-                        {position > 1 ? `in ${dept.tabLabel}, ${position - 1} ahead` : `in ${dept.tabLabel}, you are next`}
+                        {position > 1 ? `${position - 1} ahead in ${dept.tabLabel}` : `Next in ${dept.tabLabel}`}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Estimated wait</p>
-                      <p className="text-3xl font-bold tabular-nums" aria-hidden="true">
+                      <p className="text-xs text-slate-500">Est. wait</p>
+                      <p className="font-mono text-3xl font-bold tabular-nums" aria-hidden="true">
                         {formatCountdown(remaining)}
                       </p>
                       <p className="text-xs text-slate-600">about {patient.estimatedWaitMins} min</p>
@@ -843,23 +984,23 @@ function PatientTracker({
               )}
 
               {patient.status === 'ALERTED' && (
-                <div className="rounded border border-amber-300 bg-amber-50 p-4 text-amber-950">
-                  <p className="text-lg font-semibold">It is your turn</p>
-                  <p className="mt-1 text-sm">Please go to {dept.room} now.</p>
+                <div className="rounded-sm border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                  <p className="text-lg font-semibold">Your turn</p>
+                  <p className="mt-1 text-sm">Proceed to {dept.room}</p>
                 </div>
               )}
 
               {patient.status === 'IN_DOCTOR_ROOM' && (
-                <div className="rounded border border-teal-300 bg-teal-50 p-4 text-teal-950">
-                  <p className="text-lg font-semibold">You are being seen</p>
-                  <p className="mt-1 text-sm">Consultation in progress in {dept.room}.</p>
+                <div className="rounded-sm border border-teal-300 bg-teal-50 p-4 text-teal-950">
+                  <p className="text-lg font-semibold">In consultation</p>
+                  <p className="mt-1 text-sm">{dept.room}</p>
                 </div>
               )}
 
               {patient.status === 'COMPLETED' && (
-                <div className="rounded border border-slate-200 bg-slate-50 p-4 text-slate-800">
+                <div className="rounded-sm border border-slate-200/90 bg-slate-50 p-4 text-slate-800">
                   <p className="text-lg font-semibold">Visit complete</p>
-                  <p className="mt-1 text-sm">Thank you for visiting Badagry General Hospital.</p>
+                  <p className="mt-1 text-sm">Thank you.</p>
                 </div>
               )}
 
@@ -895,11 +1036,11 @@ function PatientTracker({
               </ol>
 
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-sm border border-slate-200/90 bg-slate-50 px-3 py-2">
                   <span className="text-slate-600">Room</span>
-                  <span className="font-semibold text-slate-900">{dept.room}</span>
+                  <RoomPlate room={dept.room} />
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-sm border border-slate-200/90 bg-slate-50 px-3 py-2">
                   <span className="text-slate-600">Now serving in {dept.tabLabel}</span>
                   <span className="font-semibold text-slate-900">
                     {serving ? serving.ticketNo : 'None'}
@@ -1052,7 +1193,7 @@ export default function Page() {
     setPhone('');
     setEmergency(false);
     setErrors({});
-    showToast('Demo data restored. Saved changes were cleared.');
+    showToast('Demo reset.');
   }
 
   /* ------------------------------ Intake ---------------------------------- */
@@ -1062,9 +1203,9 @@ export default function Page() {
     const nextErrors: { name?: string; phone?: string } = {};
     const cleanPhone = phone.replace(/[\s-]/g, '');
 
-    if (name.trim().length < 2) nextErrors.name = 'Enter the patient’s full name.';
+    if (name.trim().length < 2) nextErrors.name = 'Enter full name.';
     if (!PHONE_PATTERN.test(cleanPhone)) {
-      nextErrors.phone = 'Enter a Nigerian mobile number, for example 08031234567.';
+      nextErrors.phone = 'Enter a Nigerian mobile number, e.g. 08031234567.';
     }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -1171,7 +1312,7 @@ export default function Page() {
         departments,
       ),
     );
-    if (target) showToast(`${target.name} was discharged. Visit complete.`);
+    if (target) showToast(`${target.name} discharged.`);
   }
 
   /** Moves the same patient record to another department and back into the queue. */
@@ -1200,7 +1341,7 @@ export default function Page() {
     const saved = updated.find((p) => p.id === id) ?? moved;
     setPatients(updated);
     showToast(
-      `${target.name} moved from ${from.tabLabel} to ${to.tabLabel}. New ticket ${saved.ticketNo}, #${positionOf(updated, saved)} in ${to.tabLabel}. SMS sent to ${target.phone}.`,
+      `${target.name}: ${from.tabLabel} → ${to.tabLabel}. New ticket ${saved.ticketNo}, #${positionOf(updated, saved)} in ${to.tabLabel}. SMS sent.`,
     );
   }
 
@@ -1289,14 +1430,14 @@ export default function Page() {
   /* ------------------------------- Render --------------------------------- */
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 font-sans text-slate-900 antialiased">
       {/* Header and demo role switcher */}
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-slate-200/90 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <img src="/qcare-logo.png" alt="Q-Care Badagry" className="h-10 w-10 shrink-0 rounded object-contain" />
-              <h1 className="min-w-0 font-semibold leading-snug text-slate-900">
+              <img src="/qcare-logo.png" alt="Q-Care Badagry" className="h-10 w-10 shrink-0 rounded-sm object-contain" />
+              <h1 className="tracking-[-0.02em] min-w-0 font-semibold leading-snug text-slate-900">
                 <span className="block text-base sm:inline sm:text-lg">Q-Care Badagry</span>
                 <span className="hidden px-1.5 font-normal text-slate-300 sm:inline sm:text-lg">|</span>
                 <span className="block text-sm font-normal text-slate-600 sm:inline sm:text-lg">
@@ -1309,7 +1450,7 @@ export default function Page() {
               type="button"
               onClick={resetDemo}
               aria-label="Reset demo data"
-              className={`inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-2 rounded border border-slate-200 px-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 ${focusRing}`}
+              className={`inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-2 rounded-sm border border-slate-200/90 px-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 ${focusRing}`}
             >
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Reset demo</span>
@@ -1318,12 +1459,12 @@ export default function Page() {
 
           <div className="mt-3">
             <p id="role-switcher-label" className="mb-1.5 text-xs font-medium text-slate-500">
-              Demo role switcher. Choose who you are viewing as.
+              Demo role
             </p>
             <div
               role="tablist"
               aria-labelledby="role-switcher-label"
-              className="grid grid-cols-2 gap-1 rounded border border-slate-300 bg-slate-100 p-1 sm:grid-cols-4"
+              className="grid grid-cols-2 gap-1 rounded-sm border border-slate-300 bg-slate-100 p-1 sm:grid-cols-4"
             >
               {ROLE_TABS.map(({ id, label, hint, Icon }) => {
                 const selected = activeTab === id;
@@ -1336,7 +1477,7 @@ export default function Page() {
                     aria-selected={selected}
                     aria-controls={`panel-${id}`}
                     onClick={() => setActiveTab(id)}
-                    className={`flex min-h-[44px] items-center gap-2 rounded px-2.5 py-2 text-left transition-colors sm:px-3 ${focusRing} ${
+                    className={`flex min-h-[44px] items-center gap-2 rounded-sm px-2.5 py-2 text-left transition-colors sm:px-3 ${focusRing} ${
                       selected ? 'bg-teal-700 text-white' : 'text-slate-700 hover:bg-white'
                     }`}
                   >
@@ -1368,12 +1509,12 @@ export default function Page() {
             <div className="grid gap-8 lg:grid-cols-[24rem_1fr] lg:items-start">
               {/* Registration form stays in view while the queue scrolls */}
               <section className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:self-start lg:overflow-y-auto">
-                <h2 className="text-lg font-semibold">Register a patient</h2>
+                <h2 className="tracking-[-0.02em] text-lg font-semibold">Register a patient</h2>
 
                 <form
                   onSubmit={handleRegister}
                   noValidate
-                  className="mt-4 space-y-4 rounded border border-slate-200 bg-white p-4"
+                  className="mt-4 space-y-4 rounded-sm border border-slate-200/90 bg-white p-4"
                 >
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-slate-800">
@@ -1394,7 +1535,7 @@ export default function Page() {
                         aria-describedby={errors.name ? 'name-error' : undefined}
                         autoComplete="off"
                         placeholder="Full name"
-                        className={`min-h-[44px] w-full rounded border py-2.5 pl-9 pr-3 text-base sm:text-sm ${
+                        className={`min-h-[44px] w-full rounded-sm border py-2.5 pl-9 pr-3 text-base sm:text-sm ${
                           errors.name ? 'border-red-500' : 'border-slate-300'
                         } ${focusRing}`}
                       />
@@ -1424,7 +1565,7 @@ export default function Page() {
                         placeholder="08031234567"
                         aria-invalid={!!errors.phone}
                         aria-describedby={errors.phone ? 'phone-error' : undefined}
-                        className={`min-h-[44px] w-full rounded border py-2.5 pl-9 pr-3 text-base sm:text-sm ${
+                        className={`min-h-[44px] w-full rounded-sm border py-2.5 pl-9 pr-3 text-base sm:text-sm ${
                           errors.phone ? 'border-red-500' : 'border-slate-300'
                         } ${focusRing}`}
                       />
@@ -1453,7 +1594,7 @@ export default function Page() {
                           setDepartmentId(next);
                           if (!deptById(next).handlesEmergency) setEmergency(false);
                         }}
-                        className={`min-h-[44px] w-full rounded border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-base sm:text-sm ${focusRing}`}
+                        className={`min-h-[44px] w-full rounded-sm border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-base sm:text-sm ${focusRing}`}
                       >
                         {departments.map((d) => (
                           <option key={d.id} value={d.id}>
@@ -1466,12 +1607,12 @@ export default function Page() {
 
                   {/* Emergency toggle switch */}
                   <div
-                    className={`flex items-center justify-between gap-4 rounded border p-3 ${
+                    className={`flex items-center justify-between gap-4 rounded-sm border p-3 ${
                       !canFlagEmergency
-                        ? 'border-slate-200 bg-slate-100'
+                        ? 'border-slate-200/90 bg-slate-100'
                         : emergency
                           ? 'border-red-300 bg-red-50'
-                          : 'border-slate-200 bg-white'
+                          : 'border-slate-200/90 bg-white'
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -1492,8 +1633,8 @@ export default function Page() {
                         </p>
                         <p className="mt-0.5 text-xs text-slate-600">
                           {canFlagEmergency
-                            ? 'Use only if the patient must be seen first.'
-                            : `${deptById(departmentId).tabLabel} does not take emergencies. Send emergencies to Triage.`}
+                            ? 'Seen first.'
+                            : `${deptById(departmentId).tabLabel} takes no emergencies. Send to Triage.`}
                         </p>
                       </div>
                     </div>
@@ -1517,34 +1658,32 @@ export default function Page() {
                   </div>
 
                   {/* Live ticket stub: updates as the clerk changes department or urgency */}
-                  <div aria-live="polite" className="rounded border border-slate-200 bg-slate-50">
+                  <div aria-live="polite" className="rounded-sm border border-slate-200/90 bg-slate-50">
                     <div className="flex items-center justify-between gap-3 px-4 py-3">
                       <div>
-                        <p className="text-xs text-slate-500">Ticket to be issued</p>
-                        <p className="text-2xl font-bold tracking-tight text-slate-900">
-                          {preview.ticketNo}
-                        </p>
+                        <p className="text-xs text-slate-500">Next ticket</p>
+                        <Ticket no={preview.ticketNo} size="lg" />
                       </div>
                       {emergency && canFlagEmergency && <EmergencyBadge />}
                     </div>
 
                     <div className="relative border-t border-dashed border-slate-300">
                       <span
-                        className="absolute -left-[7px] -top-[7px] h-3.5 w-3.5 rounded-full border border-slate-200 bg-white"
+                        className="absolute -left-[7px] -top-[7px] h-3.5 w-3.5 rounded-full border border-slate-200/90 bg-white"
                         aria-hidden="true"
                       />
                       <span
-                        className="absolute -right-[7px] -top-[7px] h-3.5 w-3.5 rounded-full border border-slate-200 bg-white"
+                        className="absolute -right-[7px] -top-[7px] h-3.5 w-3.5 rounded-full border border-slate-200/90 bg-white"
                         aria-hidden="true"
                       />
                       <div className="grid grid-cols-2 divide-x divide-dashed divide-slate-300">
                         <div className="px-4 py-2.5">
-                          <p className="text-xs text-slate-500">Queue position</p>
-                          <p className="text-sm font-semibold text-slate-900">{preview.position}</p>
+                          <p className="text-xs text-slate-500">Position</p>
+                          <p className="text-sm font-bold text-slate-900 font-mono tabular-nums">#{preview.position}</p>
                         </div>
                         <div className="px-4 py-2.5">
-                          <p className="text-xs text-slate-500">Estimated wait</p>
-                          <p className="text-sm font-semibold text-slate-900">{preview.wait} min</p>
+                          <p className="text-xs text-slate-500">Est. wait</p>
+                          <p className="text-sm font-bold text-slate-900 font-mono tabular-nums">{preview.wait} min</p>
                         </div>
                       </div>
                     </div>
@@ -1553,14 +1692,14 @@ export default function Page() {
                   <div>
                     <button
                       type="submit"
-                      className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded bg-teal-700 px-4 py-3 text-base font-semibold text-white hover:bg-teal-800 sm:text-sm ${focusRing}`}
+                      className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-sm bg-teal-700 px-4 py-3 text-base font-semibold text-white hover:bg-teal-800 sm:text-sm ${focusRing}`}
                     >
                       <UserPlus className="h-4 w-4" aria-hidden="true" />
                       Issue ticket
                     </button>
                     <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-500">
                       <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-                      The patient is texted now, and again when called.
+                      SMS on issue and on call.
                     </p>
                   </div>
                 </form>
@@ -1568,7 +1707,7 @@ export default function Page() {
                 {issued && (
                   <div
                     role="status"
-                    className="mt-4 rounded border border-teal-300 bg-teal-50 p-4 text-sm text-teal-950"
+                    className="mt-4 rounded-sm border border-teal-300 bg-teal-50 p-4 text-sm text-teal-950"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2 font-semibold">
@@ -1579,34 +1718,36 @@ export default function Page() {
                         type="button"
                         onClick={() => setIssued(null)}
                         aria-label="Dismiss message"
-                        className={`-m-2 rounded p-2 text-teal-800 hover:bg-teal-100 ${focusRing}`}
+                        className={`-m-2 rounded-sm p-2 text-teal-800 hover:bg-teal-100 ${focusRing}`}
                       >
                         <X className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </div>
-                    <p className="mt-2 text-2xl font-bold">{issued.patient.ticketNo}</p>
+                    <div className="mt-2">
+                      <Ticket no={issued.patient.ticketNo} size="lg" />
+                    </div>
                     <p className="mt-1">
                       {issued.patient.name}, {deptById(issued.patient.department).name}.
                     </p>
                     {issued.patient.triagePriority === 'URGENT' && (
-                      <p className="mt-1 font-medium text-red-800">Marked as emergency.</p>
+                      <p className="mt-1 font-medium text-red-800">Emergency.</p>
                     )}
                     <p className="mt-1">
-                      Position {issued.position} in {deptById(issued.patient.department).tabLabel}.
-                      Estimated wait: {issued.patient.estimatedWaitMins} minutes ({issued.position} x{' '}
-                      {MINS_PER_POSITION}).
+                      Position <span className="font-mono font-bold tabular-nums">#{issued.position}</span> in{' '}
+                      {deptById(issued.patient.department).tabLabel}. Wait{' '}
+                      <span className="font-mono font-bold tabular-nums">{issued.patient.estimatedWaitMins} min</span>.
                     </p>
-                    <p className="mt-1 text-teal-900">Confirmation sent to {issued.patient.phone}.</p>
+                    <p className="mt-1 text-teal-900">SMS sent to {issued.patient.phone}.</p>
                     <button
                       type="button"
                       onClick={() => {
                         setTrackerQuery(issued.patient.ticketNo);
                         setActiveTab('PATIENT_TRACKER');
                       }}
-                      className={`mt-3 inline-flex min-h-[44px] items-center gap-2 rounded border border-teal-700 bg-white px-3 text-sm font-medium text-teal-900 hover:bg-teal-100 sm:min-h-0 sm:py-1.5 ${focusRing}`}
+                      className={`mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-teal-700 bg-white px-3 text-sm font-medium text-teal-900 hover:bg-teal-100 sm:min-h-0 sm:py-1.5 ${focusRing}`}
                     >
                       <Smartphone className="h-4 w-4" aria-hidden="true" />
-                      See live status
+                      Track ticket
                     </button>
                   </div>
                 )}
@@ -1615,7 +1756,7 @@ export default function Page() {
               {/* Live queue */}
               <section className="min-w-0">
                 <div className="flex items-baseline justify-between gap-4">
-                  <h2 className="text-lg font-semibold">Current queue</h2>
+                  <h2 className="tracking-[-0.02em] text-lg font-semibold">Current queue</h2>
                   <p className="text-sm text-slate-600">
                     {queueRows.length} {queueRows.length === 1 ? 'patient' : 'patients'}
                   </p>
@@ -1644,7 +1785,7 @@ export default function Page() {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => setQueueFilter(pill.id)}
-                        className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-sm sm:min-h-0 sm:py-1.5 ${focusRing} ${
+                        className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 whitespace-nowrap rounded-sm border px-3.5 text-sm sm:min-h-0 sm:py-1.5 ${focusRing} ${
                           selected
                             ? 'border-teal-700 bg-teal-700 font-medium text-white'
                             : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
@@ -1652,7 +1793,7 @@ export default function Page() {
                       >
                         {pill.label}
                         <span
-                          className={`rounded-full px-1.5 text-xs font-semibold ${
+                          className={`rounded-sm px-1.5 font-mono text-xs font-semibold tabular-nums ${
                             selected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
                           }`}
                         >
@@ -1664,10 +1805,10 @@ export default function Page() {
                 </div>
 
                 {/* Phones: one card per patient, no sideways scrolling */}
-                <ul className="mt-3 divide-y divide-slate-100 overflow-hidden rounded border border-slate-200 bg-white md:hidden">
+                <ul className="mt-3 divide-y divide-slate-200/90 overflow-hidden rounded-sm border border-slate-200/90 bg-white md:hidden">
                   {queueRows.length === 0 && (
                     <li className="px-4 py-8 text-center text-sm text-slate-500">
-                      No one is in this queue. Register a patient to issue a ticket.
+                      Queue empty.
                     </li>
                   )}
                   {queueRows.map((p) => {
@@ -1676,9 +1817,11 @@ export default function Page() {
                       <li key={p.id} className="px-4 py-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="font-semibold">{p.ticketNo}</p>
+                            <div>
+                              <Ticket no={p.ticketNo} />
+                            </div>
                             <p
-                              className={`text-xs font-semibold ${
+                              className={`text-xs font-semibold font-mono tabular-nums ${
                                 label.waiting ? 'text-teal-800' : 'text-slate-500'
                               }`}
                             >
@@ -1693,16 +1836,18 @@ export default function Page() {
                             {p.triagePriority === 'URGENT' ? (
                               <EmergencyBadge />
                             ) : (
-                              <span className="text-xs text-slate-500">Normal</span>
+                              <NormalTag />
                             )}
                           </div>
                         </div>
                         <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
-                          <span>Joined {formatTime(p.joinedAt)}</span>
+                          <span>
+                            Joined <span className="font-mono tabular-nums">{formatTime(p.joinedAt)}</span>
+                          </span>
                           {p.status === 'WAITING' && (
                             <span className="inline-flex items-center gap-1">
                               <Clock className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                              Estimated wait {p.estimatedWaitMins} min
+                              Est. wait <span className="font-mono tabular-nums">{p.estimatedWaitMins} min</span>
                             </span>
                           )}
                         </p>
@@ -1712,23 +1857,23 @@ export default function Page() {
                 </ul>
 
                 {/* Tablets and larger: table */}
-                <div className="mt-3 hidden overflow-x-auto rounded border border-slate-200 bg-white md:block">
+                <div className="mt-3 hidden overflow-x-auto rounded-sm border border-slate-200/90 bg-white md:block">
                   <table className="w-full min-w-[44rem] text-left text-sm">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                    <thead className="border-b border-slate-200/90 bg-slate-50 text-slate-600">
                       <tr>
-                        <th scope="col" className="px-4 py-2 font-medium">Ticket and position</th>
+                        <th scope="col" className="px-4 py-2 font-medium">Ticket</th>
                         <th scope="col" className="px-4 py-2 font-medium">Patient</th>
                         <th scope="col" className="px-4 py-2 font-medium">Priority</th>
                         <th scope="col" className="px-4 py-2 font-medium">Status</th>
-                        <th scope="col" className="px-4 py-2 font-medium">Estimated wait</th>
+                        <th scope="col" className="px-4 py-2 font-medium">Est. wait</th>
                         <th scope="col" className="px-4 py-2 font-medium">Joined</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-200/90">
                       {queueRows.length === 0 && (
                         <tr>
                           <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                            No one is in this queue. Register a patient to issue a ticket.
+                            Queue empty.
                           </td>
                         </tr>
                       )}
@@ -1737,9 +1882,9 @@ export default function Page() {
                         return (
                           <tr key={p.id}>
                             <td className="whitespace-nowrap px-4 py-3">
-                              <div className="font-semibold">{p.ticketNo}</div>
+                              <Ticket no={p.ticketNo} />
                               <div
-                                className={`text-xs font-semibold ${
+                                className={`text-xs font-semibold font-mono tabular-nums ${
                                   label.waiting ? 'text-teal-800' : 'text-slate-500'
                                 }`}
                               >
@@ -1755,13 +1900,13 @@ export default function Page() {
                               {p.triagePriority === 'URGENT' ? (
                                 <EmergencyBadge />
                               ) : (
-                                <span className="text-xs text-slate-500">Normal</span>
+                                <NormalTag />
                               )}
                             </td>
                             <td className="px-4 py-3">
                               <StatusBadge status={p.status} />
                             </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                            <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums text-slate-700">
                               {p.status === 'WAITING' ? (
                                 <span className="inline-flex items-center gap-1.5">
                                   <Clock className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
@@ -1771,7 +1916,7 @@ export default function Page() {
                                 <span className="text-slate-400">Not applicable</span>
                               )}
                             </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                            <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums text-slate-600">
                               {formatTime(p.joinedAt)}
                             </td>
                           </tr>
@@ -1795,7 +1940,7 @@ export default function Page() {
               <div
                 role="tablist"
                 aria-label="Department"
-                className={`-mx-4 flex gap-1 overflow-x-auto border-b border-slate-200 px-4 sm:mx-0 sm:px-0 ${hideScrollbar}`}
+                className={`-mx-4 flex gap-1 overflow-x-auto border-b border-slate-200/90 px-4 sm:mx-0 sm:px-0 ${hideScrollbar}`}
               >
                 {departments.map((d) => {
                   const selected = consoleDept === d.id;
@@ -1815,7 +1960,7 @@ export default function Page() {
                     >
                       {d.tabLabel}
                       <span
-                        className={`rounded px-1.5 py-0.5 text-xs ${
+                        className={`rounded-sm px-1.5 py-0.5 text-xs ${
                           selected ? 'bg-teal-700 text-white' : 'bg-slate-200 text-slate-700'
                         }`}
                       >
@@ -1828,11 +1973,14 @@ export default function Page() {
 
               <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold">{consoleDeptName}</h2>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="tracking-[-0.02em] text-lg font-semibold">{consoleDeptName}</h2>
+                    <RoomPlate room={deptById(consoleDept).room} />
+                  </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {waiting.length === 0
                       ? 'No patients waiting.'
-                      : `${waiting.length} waiting. Emergencies are called first.`}
+                      : `${waiting.length} waiting. Emergency first.`}
                   </p>
                 </div>
 
@@ -1840,7 +1988,7 @@ export default function Page() {
                   type="button"
                   onClick={callNextPatient}
                   disabled={!front}
-                  className={`flex min-h-[56px] w-full items-center justify-center gap-3 rounded bg-teal-700 px-5 py-4 text-base font-bold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 sm:w-auto sm:px-8 sm:text-lg ${focusRing}`}
+                  className={`flex min-h-[56px] w-full items-center justify-center gap-3 rounded-sm bg-teal-700 px-5 py-4 text-base font-bold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 sm:w-auto sm:px-8 sm:text-lg ${focusRing}`}
                 >
                   <BellRing className="h-6 w-6" aria-hidden="true" />
                   {front ? `Call next patient (${front.ticketNo})` : 'Call next patient'}
@@ -1850,9 +1998,8 @@ export default function Page() {
               {/* Waiting cards: only the first one is the dark hero card */}
               <section aria-label="Waiting patients" className="mt-6">
                 {waiting.length === 0 ? (
-                  <div className="rounded border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
-                    No patients are waiting in {consoleDeptName}. New registrations and transfers
-                    appear here.
+                  <div className="rounded-sm border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
+                    No patients waiting in {consoleDeptName}.
                   </div>
                 ) : (
                   <ul className="grid gap-3 sm:grid-cols-2">
@@ -1864,13 +2011,13 @@ export default function Page() {
                           key={p.id}
                           className={
                             isFront
-                              ? `rounded bg-slate-900 p-4 text-white ring-2 ring-teal-500 sm:col-span-2 ${
+                              ? `rounded-sm bg-slate-900 p-4 text-white ring-2 ring-teal-500 sm:col-span-2 ${
                                   urgent ? 'border-l-4 border-l-red-500' : ''
                                 }`
-                              : `rounded border p-4 text-slate-900 shadow-xs ${
+                              : `rounded-sm border p-4 text-slate-900 ${
                                   urgent
-                                    ? 'border-slate-200 border-l-4 border-l-red-600 bg-red-50/40'
-                                    : 'border-slate-200 bg-white'
+                                    ? 'border-slate-200/90 border-l-4 border-l-red-600 bg-red-50/40'
+                                    : 'border-slate-200/90 bg-white'
                                 }`
                           }
                         >
@@ -1879,10 +2026,12 @@ export default function Page() {
                               <p className={`text-sm font-medium ${isFront ? 'text-teal-300' : 'text-teal-800'}`}>
                                 {isFront ? 'Next in line' : `Position ${i + 1}`}
                               </p>
-                              <p className="mt-1 text-3xl font-bold tracking-tight">{p.ticketNo}</p>
+                              <div className="mt-2">
+                                <Ticket no={p.ticketNo} size="xl" dark={isFront} />
+                              </div>
                             </div>
                             {urgent && (
-                              <span className="inline-flex items-center gap-1 rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">
+                              <span className="inline-flex items-center gap-1 rounded-sm bg-red-600 px-2 py-1 text-xs font-bold text-white">
                                 <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                                 Emergency
                               </span>
@@ -1899,10 +2048,12 @@ export default function Page() {
                               <Phone className="h-3.5 w-3.5" aria-hidden="true" />
                               {p.phone}
                             </span>
-                            <span>Joined {formatTime(p.joinedAt)}</span>
+                            <span>
+                            Joined <span className="font-mono tabular-nums">{formatTime(p.joinedAt)}</span>
+                          </span>
                             <span className="inline-flex items-center gap-1.5">
                               <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                              Estimated wait {p.estimatedWaitMins} min
+                              Est. wait <span className="font-mono tabular-nums">{p.estimatedWaitMins} min</span>
                             </span>
                           </div>
                           <JourneyBadges history={p.journeyHistory} dark={isFront} />
@@ -1916,12 +2067,12 @@ export default function Page() {
               {/* Called and in consultation */}
               {inProgress.length > 0 && (
                 <section aria-label="Called and in consultation" className="mt-8">
-                  <h3 className="text-base font-semibold">Called and in consultation</h3>
+                  <h3 className="tracking-[-0.02em] text-base font-semibold">Called and in consultation</h3>
 
-                  <div className="mt-3 overflow-hidden rounded border border-slate-200 bg-white">
+                  <div className="mt-3 overflow-hidden rounded-sm border border-slate-200/90 bg-white">
                     <div
                       aria-hidden="true"
-                      className={`hidden gap-x-4 border-b border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600 lg:grid ${IN_PROGRESS_COLS}`}
+                      className={`hidden gap-x-4 border-b border-slate-200/90 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600 lg:grid ${IN_PROGRESS_COLS}`}
                     >
                       <span>Ticket</span>
                       <span>Patient</span>
@@ -1930,13 +2081,15 @@ export default function Page() {
                       <span>Next step</span>
                     </div>
 
-                    <ul className="divide-y divide-slate-100">
+                    <ul className="divide-y divide-slate-200/90">
                       {inProgress.map((p) => (
                         <li
                           key={p.id}
-                          className={`grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4 gap-y-2 px-4 py-3 lg:items-center ${IN_PROGRESS_COLS}`}
+                          className={`grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-4 gap-y-2 px-4 py-3 lg:items-center ${IN_PROGRESS_COLS}`}
                         >
-                          <span className="font-semibold">{p.ticketNo}</span>
+                          <span>
+                            <Ticket no={p.ticketNo} />
+                          </span>
                           <div className="min-w-0">
                             <p className="break-words">{p.name}</p>
                             <JourneyBadges history={p.journeyHistory} />
@@ -1944,11 +2097,11 @@ export default function Page() {
 
                           {/* Fixed-width slots keep the labels level on every row and screen size */}
                           <div className="col-span-2 flex flex-wrap items-center gap-2 lg:contents">
-                            <span className="w-28 lg:w-auto">
+                            <span className="w-32 lg:w-auto">
                               {p.triagePriority === 'URGENT' ? (
                                 <EmergencyBadge />
                               ) : (
-                                <span className="text-xs text-slate-500">Normal</span>
+                                <NormalTag />
                               )}
                             </span>
                             <span className="w-[8.5rem] lg:w-auto">
@@ -1961,7 +2114,7 @@ export default function Page() {
                               <button
                                 type="button"
                                 onClick={() => enterRoom(p.id)}
-                                className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 lg:min-h-0 lg:py-1.5 ${focusRing}`}
+                                className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 lg:min-h-0 lg:py-1.5 ${focusRing}`}
                               >
                                 <DoorOpen className="h-4 w-4" aria-hidden="true" />
                                 Enter Room
@@ -1969,7 +2122,7 @@ export default function Page() {
                               <button
                                 type="button"
                                 onClick={() => reAlert(p.id)}
-                                className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 lg:min-h-0 lg:py-1.5 ${focusRing}`}
+                                className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 lg:min-h-0 lg:py-1.5 ${focusRing}`}
                               >
                                 <BellRing className="h-4 w-4" aria-hidden="true" />
                                 Re-alert / SMS
@@ -1986,7 +2139,7 @@ export default function Page() {
                                 onChange={(e) => {
                                   if (e.target.value) transferPatient(p.id, e.target.value as DepartmentId);
                                 }}
-                                className={`min-h-[44px] min-w-0 flex-1 rounded border border-slate-300 bg-white px-2 py-2 text-base text-slate-800 sm:text-sm lg:min-h-0 lg:py-1.5 ${focusRing}`}
+                                className={`min-h-[44px] min-w-0 flex-1 rounded-sm border border-slate-300 bg-white px-2 py-2 text-base text-slate-800 sm:text-sm lg:min-h-0 lg:py-1.5 ${focusRing}`}
                               >
                                 <option value="">Transfer to...</option>
                                 {departments
@@ -2000,7 +2153,7 @@ export default function Page() {
                               <button
                                 type="button"
                                 onClick={() => completeVisit(p.id)}
-                                className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded border border-slate-300 bg-white px-2 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 lg:min-h-0 lg:py-1.5 ${focusRing}`}
+                                className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-sm border border-slate-300 bg-white px-2 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 lg:min-h-0 lg:py-1.5 ${focusRing}`}
                               >
                                 <CheckCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
                                 <span className="leading-tight">Discharge / Complete</span>
@@ -2038,8 +2191,7 @@ export default function Page() {
       </main>
 
       <footer className="mx-auto max-w-7xl px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] text-xs text-slate-500 sm:px-6">
-        Prototype built for the Badagry Tech Summit Builder Challenge. SMS, voice alerts and the
-        lobby TV link are simulated. Patient data is sample data, saved only in this browser.
+        Demo build. SMS, voice and lobby TV link are simulated. Sample data, saved in this browser.
       </footer>
 
       {/* Toast: transfers, discharges and resets */}
@@ -2047,7 +2199,7 @@ export default function Page() {
         <div
           role="status"
           aria-live="polite"
-          className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-md items-start gap-3 rounded border border-teal-300 bg-white p-3 text-sm text-slate-900 shadow-lg"
+          className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-md items-start gap-3 rounded-sm border border-slate-400 bg-white p-3 text-sm text-slate-900"
         >
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" aria-hidden="true" />
           <p className="min-w-0 flex-1">{toast.text}</p>
@@ -2055,7 +2207,7 @@ export default function Page() {
             type="button"
             onClick={() => setToast(null)}
             aria-label="Dismiss message"
-            className={`-m-2 shrink-0 rounded p-2 text-slate-500 hover:bg-slate-100 ${focusRing}`}
+            className={`-m-2 shrink-0 rounded-sm p-2 text-slate-500 hover:bg-slate-100 ${focusRing}`}
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -2073,23 +2225,23 @@ export default function Page() {
             aria-modal="true"
             aria-labelledby="sms-title"
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded bg-white p-4 shadow-xl sm:p-6"
+            className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-sm border border-slate-400 bg-white p-4 sm:p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="sms-title" className="text-lg font-semibold">
-                  SMS received on the patient’s phone
+                <h2 id="sms-title" className="tracking-[-0.02em] text-lg font-semibold">
+                  SMS to patient
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  {alertInfo.patient.name} ({alertInfo.patient.ticketNo}), sent to{' '}
-                  {alertInfo.patient.phone} via Termii.
+                  {alertInfo.patient.name} <Ticket no={alertInfo.patient.ticketNo} /> to{' '}
+                  <span className="font-mono tabular-nums">{alertInfo.patient.phone}</span> via Termii
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setAlertInfo(null)}
                 aria-label="Close"
-                className={`-m-1 shrink-0 rounded p-2 text-slate-500 hover:bg-slate-100 ${focusRing}`}
+                className={`-m-1 shrink-0 rounded-sm p-2 text-slate-500 hover:bg-slate-100 ${focusRing}`}
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -2104,13 +2256,13 @@ export default function Page() {
                 <div className="flex justify-center pt-2">
                   <div className="h-1.5 w-16 rounded-full bg-slate-800" />
                 </div>
-                <div className="border-b border-slate-200 px-4 py-2 text-center">
+                <div className="border-b border-slate-200/90 px-4 py-2 text-center">
                   <p className="text-sm font-semibold">QCare</p>
                   <p className="text-xs text-slate-500">Text message via Termii</p>
                 </div>
                 <div className="min-h-[12rem] bg-slate-50 px-3 py-4 sm:min-h-[15rem]">
                   <p className="mb-3 text-center text-xs text-slate-500">
-                    Today {formatTime(alertInfo.sentAt)}
+                    Today <span className="font-mono tabular-nums">{formatTime(alertInfo.sentAt)}</span>
                   </p>
                   <div className="max-w-[94%] rounded-2xl rounded-tl-sm bg-slate-200 px-3 py-2 text-sm leading-snug text-slate-900">
                     {smsText}
@@ -2124,21 +2276,20 @@ export default function Page() {
 
               {/* Voice drop preview */}
               <div className="w-full min-w-0">
-                <div className="rounded border border-slate-200 bg-slate-50 p-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Voice drop preview</h3>
+                <div className="rounded-sm border border-slate-200/90 bg-slate-50 p-4">
+                  <h3 className="tracking-[-0.02em] text-sm font-semibold text-slate-900">Voice drop preview</h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    A spoken alert in Ogu (Egun) and Yoruba, with English, for patients who prefer
-                    to listen.
+                    Voice alert: Ogu (Egun), Yoruba, English.
                   </p>
 
-                  <blockquote className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-base font-medium leading-snug text-slate-900">
+                  <blockquote className="mt-3 rounded-sm border border-slate-200/90 bg-white px-3 py-2 text-base font-medium leading-snug text-slate-900">
                     {voice.display}
                   </blockquote>
 
                   <button
                     type="button"
                     onClick={() => toggleVoiceDrop(voice)}
-                    className={`mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded border border-teal-700 px-4 py-3 text-center text-sm font-semibold leading-snug ${focusRing} ${
+                    className={`mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-sm border border-teal-700 px-4 py-3 text-center text-sm font-semibold leading-snug ${focusRing} ${
                       voiceState === 'playing'
                         ? 'bg-teal-700 text-white'
                         : 'bg-white text-teal-900 hover:bg-teal-50'
@@ -2159,23 +2310,22 @@ export default function Page() {
 
                   <p className="mt-2 text-xs text-slate-500" aria-live="polite">
                     {voiceState === 'unsupported'
-                      ? 'This browser cannot play speech. The text above is what the patient would hear.'
+                      ? 'Browser cannot play speech. Text above is the alert.'
                       : voiceFallback
-                        ? 'No Yoruba voice is installed on this device, so the preview reads a phonetic version with its default voice. The text above is the wording for the final audio.'
-                        : 'Preview audio is generated by your device.'}
+                        ? 'No Yoruba voice on this device. Playing phonetic version.'
+                        : 'Preview voice from this device.'}
                   </p>
                 </div>
 
                 <p className="mt-3 text-xs text-slate-500">
-                  {alertInfo.patient.name.split(' ')[0]} is now marked Alerted. Use “Enter Room” in
-                  the console when they arrive, or “Re-alert / SMS” if they are slow to come.
+                  Status: Alerted. Next: Enter Room.
                 </p>
 
                 <button
                   ref={closeButtonRef}
                   type="button"
                   onClick={() => setAlertInfo(null)}
-                  className={`mt-4 min-h-[44px] w-full rounded bg-teal-700 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-800 ${focusRing}`}
+                  className={`mt-4 min-h-[44px] w-full rounded-sm bg-teal-700 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-800 ${focusRing}`}
                 >
                   Close
                 </button>
