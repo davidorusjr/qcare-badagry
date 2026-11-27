@@ -1,8 +1,5 @@
 # Q-Care Badagry
 
-> **Submission for the Badagry Builder Challenge 2026**
-> *Track: Health & Community Infrastructure*
-
 ## Overview
 
 **Q-Care Badagry** is a real-time patient queue management system built for **Badagry General Hospital**. It replaces crowded, unpredictable waiting areas with three synchronized views--a mobile-first patient check-in portal, a clinical staff workspace, and a high-contrast waiting room TV display.
