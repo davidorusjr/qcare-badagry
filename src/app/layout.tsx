@@ -1,16 +1,17 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import { THEME_SCRIPT } from './_lib/theme';
 import './globals.css';
 
-// UI and headings
-const jakarta = Plus_Jakarta_Sans({
+// UI text
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-jakarta',
+  variable: '--font-inter',
   display: 'swap',
 });
 
-// Ticket numbers, clocks and wait timers
+// Ticket codes, timers and counters
 const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains',
@@ -18,15 +19,30 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Q-Care Badagry | Badagry General Hospital Queue System',
-  description:
-    'Queue orchestration for Badagry General Hospital and local primary health centres.',
+  title: {
+    default: 'Badagry General Hospital · QCare',
+    template: '%s · Badagry General Hospital',
+  },
+  description: 'Patient check-in and queue management for Badagry General Hospital.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1120' },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${jetbrains.variable}`}>
-      <body className="antialiased">{children}</body>
+    <html lang="en-NG" className={`${inter.variable} ${jetbrains.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Applies the saved or system theme before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body className="min-h-dvh bg-canvas font-sans text-ink antialiased">{children}</body>
     </html>
   );
 }

@@ -5,138 +5,117 @@
 
 ## Overview
 
-**Q-Care Badagry** is a queue orchestration system designed for public healthcare facilities in Badagry Division, such as Badagry General Hospital and local Primary Health Centres (PHCs).
-
-Patients in many public facilities wait for hours in crowded rooms because nobody can tell them when their turn will come. Q-Care Badagry gives every person in the hospital a clear, shared view of the queue. Records clerks register a patient with three fields. Clinicians call the next patient with one button. The patient is alerted by SMS and a spoken Yoruba/Egun voice message, and can check their live position from a phone or on the waiting room TV.
-
-This is a working MVP. The **Prototype scope** section below states plainly what is real and what is simulated.
+**Q-Care Badagry** is a real-time patient queue management system built for **Badagry General Hospital**. It replaces crowded, unpredictable waiting areas with three synchronized views—a mobile-first patient check-in portal, a clinical staff workspace, and a high-contrast waiting room TV display.
 
 ---
 
-## Demo roles
+## Core Functionality
 
-The app has a **Demo Role Switcher** at the top, so you can move between the four people who use the system without logging in.
+- **Real-Time Live Timers:** A single centralized 1-second clock (`useNow`) drives a live `HH:MM:SS` header clock, per-patient elapsed wait times (`Xm Ys`), live estimated wait countdowns, and average wait KPIs across all three views.
+- **Department-Specific Queues & Ticket Prefixes:** Dedicated queues and desks for **GOPD** (`GOPD-`), **Antenatal Clinic** (`ANC-`), **Pharmacy** (`PHM-`), **NHIS Desk** (`NHIS-`), and **Records / Card Room** (`REC-`).
+- **Automated Triage Ordering:** Patients are automatically prioritized in the queue by clinical urgency—**Emergency** > **Priority** (*Elderly 65+*, *Pregnant*, *Child under 5*) > **Standard**—and by arrival time within each tier.
+- **Multi-Tab Live Synchronization:** Queue state is persisted in `localStorage` and synchronized across open tabs (`/`, `/staff`, `/display`) in real time via `storage` events.
+- **Audio & Multilingual Voice Announcements:** When a patient is called or recalled, the waiting room TV plays a two-tone chime and speaks the ticket number and room in **Ogu (Egun)**, **Yoruba**, and **English** (using Web Audio and Speech Synthesis, with a phonetic fallback when no Yoruba voice is installed). The patient's own phone also chimes and vibrates when their ticket is called.
+- **Multi-Stage Patient Transfers:** Staff can transfer an active patient to another department (e.g., from *GOPD* to *Pharmacy*). The patient receives a new department ticket code while retaining their triage priority and visit journey history.
+- **Clinical Light & Dark Mode:** Toggleable light/dark theme in the header of `/` and `/staff` (persisted in `localStorage`, defaulting to system preference). `/display` is permanently locked to high-contrast dark mode for glare-free waiting room viewing.
 
-| Role | Who it is for | What they do |
+---
+
+## User Guide
+
+### 1. Patient Check-In & Live Ticket (`/`)
+
+**Checking in for a new visit:**
+1. Enter your **Full name**.
+2. Select the **Department** you are visiting (each row shows how many patients are currently waiting).
+3. Choose your **Priority eligibility** (*Standard*, *Elderly*, *Pregnant*, *Child*, or *Emergency*).
+4. Review the live preview of your ticket number and estimated wait, then tap **Check In**.
+
+**Tracking your ticket:**
+- Your screen turns into a live **boarding pass** showing your ticket code (e.g., `GOPD-022`), department, queue position, live **Estimated wait** countdown, and live **Waiting** duration.
+- Keep the tab open—when a clinician calls your number, the card highlights your assigned room/desk and plays a chime.
+- If you already have a ticket number from the desk, enter it in the **Already have a ticket?** box at the bottom of the check-in page and tap **Track**.
+
+### 2. Staff Clinical Workspace (`/staff`)
+
+Access `/staff` via the **Staff portal** link in the footer of `/` (or navigate directly to `/staff`).
+
+1. **Select your Desk:** In the **Currently serving** bar, choose the consulting room, dispensing window, or counter you are staffing from the **Desk** dropdown.
+2. **Filter the Queue:** Use the department pills at the top (*All departments*, *GOPD*, *Antenatal*, *Pharmacy*, *NHIS*, *Records*) to focus on one queue or monitor the whole hospital. Selecting a single department automatically switches your desk to that department.
+3. **Monitor KPIs:** The four equal-height KPI cards show live **Waiting** count (with emergency/priority breakdown), **Avg Wait** (`Xm Ys`), **Served Today** (with no-show count), and **Active Desks**.
+4. **Call Patients:**
+   - Click **Call Next** (or **Complete & Call Next** if someone is currently at your desk) to call the highest-priority waiting patient in your department.
+   - You can also click **Call** on any individual patient row belonging to your active department.
+5. **Manage the Active Visit:** In the **Currently serving** bar, use:
+   - **Recall** to re-announce the patient on the waiting room TV.
+   - **Transfer…** to move the patient to another department (issues a new ticket there).
+   - **No-Show** if the patient does not arrive at the desk.
+   - **Complete** to mark the visit finished.
+6. **Launch the TV Display:** Click **Open TV Display ↗** in the top-right header to open `/display` in a new browser tab.
+
+### 3. Waiting Room TV Display (`/display`)
+
+1. Open `/display` on a waiting room monitor (or in a separate tab alongside `/staff`) and press `F11` for browser fullscreen.
+2. **Enable Audio:** Click anywhere on the `/display` page once so the browser allows chime and voice announcements (the bottom-right indicator switches from *Click to enable sound* to the active speaker icon).
+3. **Reading the Board:**
+   - **Now Serving / Now Calling:** Shows the most recently called ticket, its department, and the exact room/desk to proceed to.
+   - **Also Serving:** Shows up to four other desks currently seeing patients.
+   - **Up Next:** Lists the next six queued tickets in calling order.
+
+### 4. Demo Tools (Testing & Walkthroughs)
+
+For demonstrations and testing, click the **Demo Tools** button in the bottom-right corner of `/` or `/staff` (closed by default) to:
+- **Add random patient:** Checks in a sample patient with realistic Nigerian names and triage priority.
+- **Simulate next call:** Calls the next waiting patient in a random active department to a desk.
+- **Reset queue:** Restores the queue to the initial realistic seed data.
+
+---
+
+## Departments & Triage
+
+| Department | Ticket prefix | Desks |
 |---|---|---|
-| **Records Intake** | Registration clerk | Registers a patient (name, phone, department) and issues a ticket. Sees the live queue, filtered by department. |
-| **Clinician Console** | Triage nurse, doctor, lab and pharmacy staff | Calls the next patient, re-alerts slow walkers, sends patients to the room, transfers them to another department or discharges them. |
-| **Lobby TV Display** | Waiting room screen | Shows "Now serving" and "Next" for every department, with a live clock, a test chime and a fullscreen mode. |
-| **Patient Live Check** | Patient or visitor on a phone | Enter a ticket number such as `OPD-015` to see queue position, a wait countdown, journey stage and room. |
+| General Out-Patient (GOPD) | `GOPD-014` | Consulting Rooms 1–3 |
+| Antenatal Clinic | `ANC-003` | ANC Rooms 1–2 |
+| Pharmacy | `PHM-021` | Dispensing Windows 1–2 |
+| NHIS Desk | `NHIS-008` | NHIS Desks 1–2 |
+| Records / Card Room | `REC-019` | Card Counters 1–2 |
+
+1. **Emergency** (Red)
+2. **Priority** — Elderly (65+), Pregnant, or Child under 5 (Amber)
+3. **Standard** (Neutral Slate)
 
 ---
 
-## Key features
+## Architecture & Tech Stack
 
-* **Fast registration:** only name, phone number and department are required. A live ticket stub shows the ticket number, queue position and estimated wait before the clerk issues it. Phone numbers are validated as Nigerian mobile numbers.
-* **Emergency priority:** an emergency switch moves a patient to the front of their department's queue. Pharmacy and Laboratory do not take emergencies, so the switch is disabled there and emergencies are directed to Triage.
-* **One-button calling:** **Call next patient** moves the first person in line to *Alerted* and opens the SMS preview. Emergencies are always called first.
-* **Multi-stage patient journeys:** a patient can be transferred from Triage to OPD, Lab, Pharmacy or any other department. The same record moves, receives a new department ticket and keeps a history of the stops already made.
-* **Hold and recall:** alerted patients can be re-alerted by SMS, then moved into the room with **Enter Room**.
-* **SMS and voice alert preview:** a phone mock-up shows the text the patient would receive. A voice drop preview plays the greeting in Ogu (Egun) and Yoruba, with English, for patients who cannot read or prefer to listen.
-* **Live hospital summary:** four cards show people waiting, urgent cases, patients in consultation and the average estimated wait.
-* **Department queues:** OPD, Triage, Antenatal, Paediatrics, Laboratory and Pharmacy each keep their own queue and position numbering.
-* **Saved in the browser:** data persists across refreshes. A **Reset demo** button restores the sample data.
-* **Mobile first:** tables become cards on phones, tap targets are at least 44px, and form inputs use 16px text so iPhones do not zoom in.
+```
+src/app/
+  page.tsx               /         Patient check-in and live boarding-pass ticket
+  staff/page.tsx         /staff    Staff clinical workspace
+  display/page.tsx       /display  Waiting room TV departure board
+  _components/           Views, header/footer, theme toggle, demo tools, UI primitives
+  _lib/queue.ts          Departments, desks, triage ordering, time formatting, seed data
+  _lib/store.ts          Shared localStorage queue store and actions
+  _lib/client-state.ts   Centralized 1s clock (useNow) and persisted-value hooks
+  _lib/audio.ts          Web Audio chime and Ogu/Yoruba/English speech synthesis
+  _lib/theme.ts          Pre-paint theme script and toggle helpers
+```
 
-### How the wait estimate works
+- **Stack:** Next.js 16 (App Router, Cache Components), React 19, TypeScript, Tailwind CSS v4, Lucide icons, Inter & JetBrains Mono (`tabular-nums`).
+- **Prototype Scope:** All patient records are sample data stored locally in the browser (`localStorage`). To connect a multi-device backend, replace `load` and `persist` in `src/app/_lib/store.ts` with API calls.
 
-Estimated wait is **queue position × 8 minutes**, calculated per department. Position 1 is about 8 minutes and position 3 is about 24 minutes. Estimates update whenever the queue changes.
-
-### Departments
-
-| Department | Ticket prefix | Room | Takes emergencies |
-|---|---|---|---|
-| OPD (General Outpatient) | `OPD` | Room 3 | Yes |
-| Triage | `TRI` | Bay 1 | Yes |
-| Antenatal | `ANC` | Room 5 | Yes |
-| Paediatrics (Children) | `PAE` | Room 4 | Yes |
-| Laboratory | `LAB` | Sample Room | No |
-| Pharmacy | `PHA` | Counter 1 | No |
-
----
-
-## Prototype scope: what is real and what is simulated
-
-**Working in this MVP**
-
-* Registration, ticket numbering, queue ordering, wait estimates and emergency priority.
-* Calling, re-alerting, entering the room, transfers between departments and discharge.
-* All four role views, which update from the same live data.
-* Saving the queue in the browser (`localStorage`), and syncing it between browser tabs.
-* Voice playback using the browser's built-in speech. If the device has no Yoruba voice, a phonetic version is read with the default voice.
-
-**Simulated in this MVP**
-
-* **SMS:** the message is shown in a phone mock-up. No text is actually sent. The production design sends it through the Termii API from a server route, so the API key never reaches the browser.
-* **WhatsApp:** the phone field is labelled WhatsApp / phone number, but WhatsApp messages are not sent yet.
-* **Lobby TV:** it is a display view inside the app. A second browser tab in the same browser stays in sync, but it does not yet reach other devices.
-* **Data:** all patients are sample data. Nothing is sent to a server, and no real patient information is stored.
-
-**Roadmap to production**
-
-1. A database (for example Postgres) so queues are shared across devices and facilities.
-2. A server route that sends SMS through Termii, with delivery status.
-3. WhatsApp Business messaging.
-4. A dedicated `/lobby` page that a waiting room TV can open on its own.
-5. Staff login and role permissions, replacing the demo role switcher.
-6. Voice recordings by native Ogu (Egun) and Yoruba speakers. The current wording should be reviewed by native speakers before real use.
-
----
-
-## Tech stack
-
-* **Framework:** Next.js (App Router)
-* **UI library:** React 19
-* **Language:** TypeScript (`.tsx`)
-* **Styling:** Tailwind CSS v4
-* **Icons:** Lucide React (the only dependency beyond the framework)
-* **Deployment:** Vercel
-
-The whole interface is in one file, `src/app/page.tsx`. Sounds and voice use the browser's own Web Audio and Speech Synthesis, with no extra libraries.
-
----
-
-## Local development setup
+## Local Development
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/davidorusjr/qcare-badagry.git
-
-# 2. Move into the project folder
 cd qcare-badagry
-
-# 3. Install dependencies
 npm install
-
-# 4. Start the development server
 npm run dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000).
-
-The logo is loaded from `public/qcare-logo.png`. Replace that file to change it.
-
----
-
-## Suggested walkthrough
-
-1. **Records Intake:** register a patient. Try the emergency switch, then pick Pharmacy to see it lock. Watch the ticket stub update before you press **Issue ticket**.
-2. **Clinician Console:** open OPD and press **Call next patient**. The emergency case is called first. Read the SMS on the phone mock-up and press **Play Yoruba/Egun Voice Drop Alert**.
-3. **Hold and recall:** press **Re-alert / SMS**, then **Enter Room**.
-4. **Transfer:** with the patient in the room, choose **Transfer to...** and send them to Lab. They rejoin the queue there with a new ticket and a journey badge.
-5. **Lobby TV Display:** see "Now serving" change. Try **Fullscreen preview** and **Test chime and voice**. For a two-screen demo, open the app in a second tab and show this view there.
-6. **Patient Live Check:** enter `OPD-015` and watch the position and countdown.
-7. Press **Reset demo** in the header to start again.
-
----
-
-## Accessibility
-
-Keyboard focus is managed in dialogs (focus moves in, Escape closes, focus returns). Live regions announce queue changes. Controls are labelled, status is never shown by colour alone, and animations respect the reduced motion setting.
-
----
+Open [http://localhost:3000](http://localhost:3000), then open `/staff` and `/display` in separate tabs to see live cross-tab updates.
 
 ## Author
 
-Built by David Orus Jr for the Badagry Builder Challenge 2026.
+Built by David Orus Jr
