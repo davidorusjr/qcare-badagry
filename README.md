@@ -12,7 +12,7 @@
 ## Core Functionality
 
 - **Real-Time Live Timers:** A single centralized 1-second clock (`useNow`) drives a live `HH:MM:SS` header clock, per-patient elapsed wait times (`Xm Ys`), live estimated wait countdowns, and average wait KPIs across all three views.
-- **Department-Specific Queues & Ticket Prefixes:** Dedicated queues and desks for **GOPD** (`GOPD-`), **Antenatal Clinic** (`ANC-`), **Pharmacy** (`PHM-`), **NHIS Desk** (`NHIS-`), and **Records / Card Room** (`REC-`).
+- **Department-Specific Queues & Ticket Prefixes:** Dedicated queues and desks for **GOPD** (`GOPD-`), **Antenatal Clinic** (`ANC-`), **Pharmacy** (`PHM-`), **Laboratory / Diagnostics** (`LAB-`), and **Records / Card Room** (`REC-`).
 - **Automated Triage Ordering:** Patients are automatically prioritized in the queue by clinical urgency—**Emergency** > **Priority** (*Elderly 65+*, *Pregnant*, *Child under 5*) > **Standard**—and by arrival time within each tier.
 - **Multi-Tab Live Synchronization:** Queue state is persisted in `localStorage` and synchronized across open tabs (`/`, `/staff`, `/display`) in real time via `storage` events.
 - **Audio & Multilingual Voice Announcements:** When a patient is called or recalled, the waiting room TV plays a two-tone chime and speaks the ticket number and room in **Ogu (Egun)**, **Yoruba**, and **English** (using Web Audio and Speech Synthesis, with a phonetic fallback when no Yoruba voice is installed). The patient's own phone also chimes and vibrates when their ticket is called.
@@ -41,7 +41,7 @@
 Access `/staff` via the **Staff portal** link in the footer of `/` (or navigate directly to `/staff`).
 
 1. **Select your Desk:** In the **Currently serving** bar, choose the consulting room, dispensing window, or counter you are staffing from the **Desk** dropdown.
-2. **Filter the Queue:** Use the department pills at the top (*All departments*, *GOPD*, *Antenatal*, *Pharmacy*, *NHIS*, *Records*) to focus on one queue or monitor the whole hospital. Selecting a single department automatically switches your desk to that department.
+2. **Filter the Queue:** Use the department pills at the top (*All departments*, *GOPD*, *Antenatal*, *Pharmacy*, *Laboratory*, *Records*) to focus on one queue or monitor the whole hospital. Selecting a single department automatically switches your desk to that department.
 3. **Monitor KPIs:** The four equal-height KPI cards show live **Waiting** count (with emergency/priority breakdown), **Avg Wait** (`Xm Ys`), **Served Today** (with no-show count), and **Active Desks**.
 4. **Call Patients:**
    - Click **Call Next** (or **Complete & Call Next** if someone is currently at your desk) to call the highest-priority waiting patient in your department.
@@ -78,7 +78,7 @@ For demonstrations and testing, click the **Demo Tools** button in the bottom-ri
 | General Out-Patient (GOPD) | `GOPD-014` | Consulting Rooms 1–3 |
 | Antenatal Clinic | `ANC-003` | ANC Rooms 1–2 |
 | Pharmacy | `PHM-021` | Dispensing Windows 1–2 |
-| NHIS Desk | `NHIS-008` | NHIS Desks 1–2 |
+| Laboratory / Diagnostics | `LAB-008` | Lab Windows 1–2 |
 | Records / Card Room | `REC-019` | Card Counters 1–2 |
 
 1. **Emergency** (Red)

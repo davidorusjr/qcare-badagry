@@ -9,9 +9,11 @@ import {
   DoorOpen,
   Megaphone,
   Monitor,
+  Search,
   Timer,
   UserX,
   Users,
+  X,
 } from 'lucide-react';
 import { createLocalValue, useNow } from '../_lib/client-state';
 import { queueActions, useQueue } from '../_lib/store';
@@ -49,6 +51,7 @@ export function StaffView() {
   const now = useNow();
   const storedDesk = deskStore.useValue();
   const [filter, setFilter] = useState<Filter>('ALL');
+  const [search, setSearch] = useState('');
   const { toast, show, dismiss } = useToast();
 
   const ready = state !== null && now !== null;
@@ -58,6 +61,12 @@ export function StaffView() {
   const serving = servingAt(patients, desk.id);
   const nextUp = waitingList(patients, desk.department)[0];
   const queue = waitingList(patients, filter);
+  const query = search.trim().toLowerCase();
+  const visibleQueue = query
+    ? queue.filter(
+        (p) => p.ticketNo.toLowerCase().includes(query) || p.name.toLowerCase().includes(query),
+      )
+    : queue;
 
   function selectFilter(id: Filter) {
     setFilter(id);
@@ -116,7 +125,7 @@ export function StaffView() {
         <ThemeToggle />
       </AppHeader>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 pt-6 pb-24 sm:px-6">
         <h1 className="sr-only">Staff clinical workspace</h1>
 
         <FilterBar patients={patients} filter={filter} onSelect={selectFilter} />
@@ -150,7 +159,7 @@ export function StaffView() {
 
         {/* Waiting queue */}
         <section aria-labelledby="queue-heading" className="space-y-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 id="queue-heading" className="text-base font-semibold tracking-tight">
                 Waiting queue
@@ -161,27 +170,60 @@ export function StaffView() {
                 triage, then arrival
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleCallNext}
-              disabled={!ready || !nextUp}
-              className={`${btn('primary', 'lg')} w-full sm:w-auto`}
-            >
-              <BellRing className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {!ready ? (
-                'Call Next'
-              ) : nextUp ? (
-                <>
-                  {serving ? 'Complete & Call Next' : 'Call Next'}
-                  <span className="font-mono tabular-nums">{nextUp.ticketNo}</span>
-                </>
-              ) : (
-                `No one waiting for ${deskDept.short}`
-              )}
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative w-full sm:w-60">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+                  aria-hidden="true"
+                />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search ticket or name..."
+                  aria-label="Search ticket or name"
+                  className={`h-11 w-full rounded-md border border-line-strong bg-surface pl-9 pr-8 text-sm text-ink placeholder:text-muted ${focusRing}`}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    aria-label="Clear search"
+                    className={` absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted hover:text-ink ${focusRing}`}
+                  >
+                    <X className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleCallNext}
+                disabled={!ready || !nextUp}
+                className={`${btn('primary', 'lg')} w-full sm:w-auto`}
+              >
+                <BellRing className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {!ready ? (
+                  'Call Next'
+                ) : nextUp ? (
+                  <>
+                    {serving ? 'Complete & Call Next' : 'Call Next'}
+                    <span className="font-mono tabular-nums">{nextUp.ticketNo}</span>
+                  </>
+                ) : (
+                  `No one waiting for ${deskDept.short}`
+                )}
+              </button>
+            </div>
           </div>
 
-          <QueueTable ready={ready} queue={queue} patients={patients} desk={desk} now={now} onCall={handleCall} />
+          <QueueTable
+            ready={ready}
+            queue={visibleQueue}
+            patients={patients}
+            desk={desk}
+            now={now}
+            onCall={handleCall}
+          />
         </section>
       </main>
 
@@ -467,6 +509,8 @@ function ServingBar({
 /* Waiting queue: aligned grid on desktop, stacked cards on phones             */
 /* -------------------------------------------------------------------------- */
 
+const MOBILE_PREVIEW_LIMIT = 5;
+
 function QueueTable({
   ready,
   queue,
@@ -482,6 +526,8 @@ function QueueTable({
   now: number | null;
   onCall: (p: Patient) => void;
 }) {
+  const [showAllMobile, setShowAllMobile] = useState(false);
+
   return (
     <Panel as="div">
       <div
@@ -504,90 +550,111 @@ function QueueTable({
       ) : queue.length === 0 ? (
         <p className="px-4 py-12 text-center text-sm text-muted">No patients waiting.</p>
       ) : (
-        <ol aria-label="Waiting patients" className="divide-y divide-line">
-          {queue.map((p) => {
-            const dept = deptById(p.department);
-            const position = positionOf(patients, p);
-            const waited = formatDuration(elapsedSince(p.joinedAt, now ?? p.joinedAt));
-            const canCall = p.department === desk.department;
-            const article = /^[AEIOU]|^NHIS/.test(dept.short) ? 'an' : 'a';
-            const callTitle = canCall
-              ? `Call ${p.ticketNo} to ${desk.label}`
-              : `Select ${article} ${dept.short} desk to call`;
+        <>
+          <ol aria-label="Waiting patients" className="divide-y divide-line">
+            {queue.map((p, index) => {
+              const dept = deptById(p.department);
+              const position = positionOf(patients, p);
+              const waited = formatDuration(elapsedSince(p.joinedAt, now ?? p.joinedAt));
+              const canCall = p.department === desk.department;
+              const article = /^[AEIOU]/.test(dept.short) ? 'an' : 'a';
+              const callTitle = canCall
+                ? `Call ${p.ticketNo} to ${desk.label}`
+                : `Select ${article} ${dept.short} desk to call`;
+              const hiddenOnMobile = !showAllMobile && index >= MOBILE_PREVIEW_LIMIT;
 
-            const callButton = (
+              return (
+                <li key={p.id} className={hiddenOnMobile ? 'hidden md:block' : undefined}>
+                  {/* Compact 2-row phone card */}
+                  <div className="space-y-2 p-3 md:hidden">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="font-mono text-base font-semibold leading-none tabular-nums">
+                          {p.ticketNo}
+                        </span>
+                        <TriageTag triage={p.triage} reason={p.reason} />
+                      </div>
+                      <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-muted">
+                        {waited}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{p.name}</p>
+                        <p className="truncate text-xs text-muted">
+                          {dept.short} · Pos {position}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onCall(p)}
+                        disabled={!canCall}
+                        title={callTitle}
+                        aria-label={callTitle}
+                        className={btn('secondary', 'sm')}
+                      >
+                        <BellRing className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        Call
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Desktop row */}
+                  <div className={`hidden items-center gap-4 px-4 py-3 md:grid ${COLS}`}>
+                    <div>
+                      <p className="font-mono text-base font-semibold tabular-nums">{p.ticketNo}</p>
+                      <p className="font-mono text-xs tabular-nums text-muted">Pos {position}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{p.name}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <TriageTag triage={p.triage} reason={p.reason} />
+                        {p.journey && p.journey.length > 0 && (
+                          <span className="truncate text-xs text-muted">
+                            from {deptById(p.journey[p.journey.length - 1]).short}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{dept.short}</p>
+                      <p className="truncate text-xs text-muted">{dept.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-base font-semibold tabular-nums">{waited}</p>
+                      <p className="font-mono text-xs tabular-nums text-muted">{formatClock(p.joinedAt)}</p>
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => onCall(p)}
+                        disabled={!canCall}
+                        title={callTitle}
+                        aria-label={callTitle}
+                        className={`${btn('secondary', 'md')} w-full`}
+                      >
+                        <BellRing className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        Call
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          {queue.length > MOBILE_PREVIEW_LIMIT && (
+            <div className="border-t border-line p-3 md:hidden">
               <button
                 type="button"
-                onClick={() => onCall(p)}
-                disabled={!canCall}
-                title={callTitle}
-                aria-label={callTitle}
+                onClick={() => setShowAllMobile((v) => !v)}
                 className={`${btn('secondary', 'md')} w-full`}
               >
-                <BellRing className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Call
+                {showAllMobile ? 'Show less' : `Show all ${queue.length} waiting`}
               </button>
-            );
-
-            return (
-              <li key={p.id}>
-                {/* Phone card */}
-                <div className="space-y-4 p-4 md:hidden">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-mono text-lg font-semibold leading-none tabular-nums">{p.ticketNo}</p>
-                      <p className="mt-2 truncate font-medium">{p.name}</p>
-                    </div>
-                    <TriageTag triage={p.triage} reason={p.reason} />
-                  </div>
-                  <dl className="grid grid-cols-3 gap-4">
-                    <div className="min-w-0">
-                      <dt className={eyebrowClass}>Dept</dt>
-                      <dd className="mt-1 truncate text-sm font-medium">{dept.short}</dd>
-                    </div>
-                    <div>
-                      <dt className={eyebrowClass}>Waiting</dt>
-                      <dd className="mt-1 font-mono text-sm font-semibold tabular-nums">{waited}</dd>
-                    </div>
-                    <div>
-                      <dt className={eyebrowClass}>Position</dt>
-                      <dd className="mt-1 font-mono text-sm font-semibold tabular-nums">{position}</dd>
-                    </div>
-                  </dl>
-                  {callButton}
-                </div>
-
-                {/* Desktop row */}
-                <div className={`hidden items-center gap-4 px-4 py-3 md:grid ${COLS}`}>
-                  <div>
-                    <p className="font-mono text-base font-semibold tabular-nums">{p.ticketNo}</p>
-                    <p className="font-mono text-xs tabular-nums text-muted">Pos {position}</p>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{p.name}</p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <TriageTag triage={p.triage} reason={p.reason} />
-                      {p.journey && p.journey.length > 0 && (
-                        <span className="truncate text-xs text-muted">
-                          from {deptById(p.journey[p.journey.length - 1]).short}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{dept.short}</p>
-                    <p className="truncate text-xs text-muted">{dept.name}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-mono text-base font-semibold tabular-nums">{waited}</p>
-                    <p className="font-mono text-xs tabular-nums text-muted">{formatClock(p.joinedAt)}</p>
-                  </div>
-                  <div>{callButton}</div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+            </div>
+          )}
+        </>
       )}
     </Panel>
   );

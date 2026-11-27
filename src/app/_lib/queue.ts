@@ -3,7 +3,7 @@
 /* Nothing in this file touches the browser, so it is safe on the server.     */
 /* -------------------------------------------------------------------------- */
 
-export type DepartmentId = 'GOPD' | 'ANC' | 'PHM' | 'NHIS' | 'REC';
+export type DepartmentId = 'GOPD' | 'ANC' | 'PHM' | 'lab' | 'REC';
 export type Triage = 'EMERGENCY' | 'PRIORITY' | 'STANDARD';
 export type PriorityReason = 'ELDERLY' | 'PREGNANT' | 'PEDIATRIC';
 export type PatientStatus = 'WAITING' | 'SERVING' | 'COMPLETED' | 'NO_SHOW';
@@ -80,12 +80,12 @@ export const DEPARTMENTS: Department[] = [
     desks: desks('PHM', ['Dispensing Window 1', 'Dispensing Window 2']),
   },
   {
-    id: 'NHIS',
-    code: 'NHIS',
-    name: 'NHIS Desk',
-    short: 'NHIS',
+    id: 'lab',
+    code: 'LAB',
+    name: 'Laboratory / Diagnostics',
+    short: 'Laboratory',
     minsPerPatient: 7,
-    desks: desks('NHIS', ['NHIS Desk 1', 'NHIS Desk 2']),
+    desks: desks('lab', ['Lab Window 1', 'Lab Window 2']),
   },
   {
     id: 'REC',
@@ -305,10 +305,10 @@ const ACTIVE_ROWS: SeedRow[] = [
   { ticket: 'PHM-021', name: 'Emeka Obi', joined: 19, called: 2, desk: 'PHM-1', journey: ['GOPD'] },
   { ticket: 'PHM-022', name: 'Zainab Garba', joined: 17, journey: ['GOPD'] },
   { ticket: 'PHM-023', name: 'Oluwaseun Bakare', triage: 'PRIORITY', reason: 'ELDERLY', joined: 12, journey: ['GOPD'] },
-  // NHIS
-  { ticket: 'NHIS-008', name: 'Grace Adebayo', joined: 26, called: 4, desk: 'NHIS-1' },
-  { ticket: 'NHIS-009', name: 'Ibrahim Sanni', joined: 24 },
-  { ticket: 'NHIS-010', name: 'Tolani Zannu', joined: 14 },
+  // Laboratory / Diagnostics
+  { ticket: 'LAB-008', name: 'Grace Adebayo', joined: 26, called: 4, desk: 'lab-1', journey: ['GOPD'] },
+  { ticket: 'LAB-009', name: 'Ibrahim Sanni', joined: 24, journey: ['GOPD'] },
+  { ticket: 'LAB-010', name: 'Tolani Zannu', joined: 14, journey: ['ANC'] },
   // Records / Card Room
   { ticket: 'REC-018', name: 'Chidera Okeke', joined: 18, called: 1, desk: 'REC-1' },
   { ticket: 'REC-019', name: 'Segun Lawson', joined: 15 },
@@ -321,7 +321,7 @@ const SERVED_ROWS: [prefix: DepartmentId, from: number, to: number][] = [
   ['GOPD', 6, 13],
   ['ANC', 1, 2],
   ['PHM', 15, 20],
-  ['NHIS', 5, 7],
+  ['lab', 5, 7],
   ['REC', 10, 17],
 ];
 
@@ -342,27 +342,29 @@ export function seedState(now: number): QueueState {
   const patients: Patient[] = [];
 
   SERVED_ROWS.forEach(([dept, from, to], d) => {
+    const deptInfo = deptById(dept);
     for (let n = from; n <= to; n++) {
       const i = patients.length;
       const joinedAgo = 150 - i * 4;
       const noShow = dept === 'GOPD' && n === 11;
       patients.push({
-        id: `seed-${dept}-${n}`,
+        id: `seed-${deptInfo.code}-${n}`,
         name: `${FIRST_NAMES[(i * 7 + d) % FIRST_NAMES.length]} ${LAST_NAMES[(i * 5 + d) % LAST_NAMES.length]}`,
         department: dept,
-        ticketNo: `${dept}-${String(n).padStart(3, '0')}`,
+        ticketNo: `${deptInfo.code}-${String(n).padStart(3, '0')}`,
         triage: 'STANDARD',
         status: noShow ? 'NO_SHOW' : 'COMPLETED',
         joinedAt: now - joinedAgo * MIN,
         calledAt: now - (joinedAgo - 18) * MIN,
         finishedAt: now - (joinedAgo - 26) * MIN,
-        deskId: deptById(dept).desks[n % deptById(dept).desks.length].id,
+        deskId: deptInfo.desks[n % deptInfo.desks.length].id,
       });
     }
   });
 
   ACTIVE_ROWS.forEach((row, i) => {
-    const dept = row.ticket.split('-')[0] as DepartmentId;
+    const code = row.ticket.split('-')[0];
+    const dept = DEPARTMENTS.find((d) => d.code === code)?.id ?? 'GOPD';
     // Stagger by a few seconds so live timers don't all read "…m 00s"
     const jitter = ((i * 23) % 60) * 1000;
     patients.push({
@@ -391,7 +393,7 @@ function pick<T>(list: readonly T[]): T {
 
 /** Call from event handlers only: uses Math.random. */
 export function randomCheckIn(): { name: string; department: DepartmentId; eligibility: EligibilityId } {
-  const department = pick<DepartmentId>(['GOPD', 'GOPD', 'GOPD', 'ANC', 'PHM', 'PHM', 'NHIS', 'REC', 'REC']);
+  const department = pick<DepartmentId>(['GOPD', 'GOPD', 'GOPD', 'ANC', 'PHM', 'PHM', 'lab', 'REC', 'REC']);
   const roll = Math.random();
   let eligibility: EligibilityId = 'STANDARD';
   if (department === 'ANC') eligibility = roll < 0.12 ? 'EMERGENCY' : 'PREGNANT';
